@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rustworkx"
+version = "0.17.0"
+description = "Python bindings for the rustworkx graph library (WebAssembly version)"
+authors = [
+    {name = "Matthew Treinish", email = "mtreinish@kortar.org"},
+]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering",
+]
+requires-python = ">=3.7"

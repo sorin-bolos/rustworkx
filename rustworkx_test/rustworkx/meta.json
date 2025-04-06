@@ -1,0 +1,11 @@
+{
+  "name": "rustworkx",
+  "version": "0.17.0",
+  "deps": [
+    "numpy"
+  ],
+  "imports": [
+    "numpy"
+  ],
+  "unvendored_tests": false
+}

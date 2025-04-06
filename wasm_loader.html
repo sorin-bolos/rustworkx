@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rustworkx WASM Loader</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+<body>
+    <h2>Rustworkx WASM Module Loader</h2>
+    <div id="output" style="white-space: pre-wrap; font-family: monospace;"></div>
+    
+    <script type="text/javascript">
+        window.loadRustworkxWasm = async function() {
+            const output = document.getElementById("output");
+            output.textContent = "Loading WASM module...\n";
+            
+            try {
+                // Load the JS loader file
+                const response = await fetch('./build/wasm/rustworkx_wasm.js');
+                const jsContent = await response.text();
+                
+                // Evaluate the JS in the global scope
+                const scriptTag = document.createElement('script');
+                scriptTag.textContent = jsContent;
+                document.head.appendChild(scriptTag);
+                
+                // Let the script initialize
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                if (typeof rustworkx_wasm === 'undefined') {
+                    throw new Error("rustworkx_wasm not defined after loading script");
+                }
+                
+                // Load the actual wasm binary
+                const wasmResponse = await fetch('./build/wasm/rustworkx_wasm_bg.wasm');
+                const wasmBuffer = await wasmResponse.arrayBuffer();
+                
+                // Initialize the module
+                await rustworkx_wasm(wasmBuffer);
+                
+                output.textContent += "WASM module loaded successfully.\n";
+                return true;
+            } catch (error) {
+                output.textContent += "Error loading WASM module: " + error + "\n";
+                console.error(error);
+                return false;
+            }
+        };
+        
+        async function main() {
+            const output = document.getElementById("output");
+            output.textContent = "Loading Pyodide...\n";
+            
+            // Load Pyodide
+            const pyodide = await loadPyodide();
+            output.textContent += "Pyodide loaded.\n";
+            
+            // Load the WASM module
+            const success = await window.loadRustworkxWasm();
+            
+            if (success) {
+                // Register with Pyodide
+                pyodide.registerJsModule("rustworkx_wasm", rustworkx_wasm);
+                output.textContent += "Module registered with Pyodide.\n";
+                
+                // Verify it works
+                try {
+                    const result = await pyodide.runPythonAsync(`
+                        from js import rustworkx_wasm
+                        print("Successfully imported rustworkx_wasm from JS")
+                        "Module import successful"
+                    `);
+                    output.textContent += result + "\n";
+                } catch (error) {
+                    output.textContent += "Error importing module in Python: " + error + "\n";
+                }
+            }
+        }
+        
+        main();
+    </script>
+</body>
+</html>

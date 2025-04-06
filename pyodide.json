@@ -1,0 +1,16 @@
+{
+  "build": {
+    "wheel": {
+      "packageType": "emscripten"
+    },
+    "exports": [
+      "rustworkx",
+      "rustworkx_wasm"
+    ]
+  },
+  "dependencies": {
+    "packages": [
+      "numpy"
+    ]
+  }
+}

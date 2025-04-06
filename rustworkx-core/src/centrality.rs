@@ -21,7 +21,6 @@ use petgraph::visit::{
     IntoEdgesDirected, IntoNeighbors, IntoNeighborsDirected, IntoNodeIdentifiers, NodeCount,
     NodeIndexable, Reversed, ReversedEdgeReference, Visitable,
 };
-use rayon_cond::CondIterator;
 
 /// Compute the betweenness centrality of all nodes in a graph.
 ///
@@ -69,7 +68,7 @@ pub fn betweenness_centrality<G>(
     graph: G,
     include_endpoints: bool,
     normalized: bool,
-    parallel_threshold: usize,
+    _parallel_threshold: usize,
 ) -> Vec<Option<f64>>
 where
     G: NodeIndexable
@@ -80,21 +79,7 @@ where
         + GraphBase
         + std::marker::Sync,
     <G as GraphBase>::NodeId: std::cmp::Eq + Hash + Send,
-    // rustfmt deletes the following comments if placed inline above
-    // + IntoNodeIdentifiers // for node_identifiers()
-    // + IntoNeighborsDirected // for neighbors()
-    // + NodeCount // for node_count
-    // + GraphProp // for is_directed
 {
-    // Correspondence of variable names to quantities in the paper is as follows:
-    //
-    // P -- predecessors
-    // S -- verts_sorted_by_distance,
-    //      vertices in order of non-decreasing distance from s
-    // Q -- Q
-    // sigma -- sigma
-    // delta -- delta
-    // d -- distance
     let max_index = graph.node_bound();
 
     let mut betweenness: Vec<Option<f64>> = vec![None; max_index];
@@ -105,7 +90,24 @@ where
     let locked_betweenness = RwLock::new(&mut betweenness);
     let node_indices: Vec<G::NodeId> = graph.node_identifiers().collect();
 
-    CondIterator::new(node_indices, graph.node_count() >= parallel_threshold)
+    #[cfg(not(target_arch = "wasm32"))]
+    let _result = node_indices
+        .into_par_iter()
+        .map(|node_s| (shortest_path_for_centrality(&graph, &node_s), node_s))
+        .for_each(|(mut shortest_path_calc, node_s)| {
+            _accumulate_vertices(
+                &locked_betweenness,
+                max_index,
+                &mut shortest_path_calc,
+                node_s,
+                &graph,
+                include_endpoints,
+            );
+        });
+
+    #[cfg(target_arch = "wasm32")]
+    let _result = node_indices
+        .into_iter()
         .map(|node_s| (shortest_path_for_centrality(&graph, &node_s), node_s))
         .for_each(|(mut shortest_path_calc, node_s)| {
             _accumulate_vertices(
@@ -172,7 +174,7 @@ where
 pub fn edge_betweenness_centrality<G>(
     graph: G,
     normalized: bool,
-    parallel_threshold: usize,
+    _parallel_threshold: usize,
 ) -> Vec<Option<f64>>
 where
     G: NodeIndexable
@@ -195,7 +197,23 @@ where
     }
     let locked_betweenness = RwLock::new(&mut betweenness);
     let node_indices: Vec<G::NodeId> = graph.node_identifiers().collect();
-    CondIterator::new(node_indices, graph.node_count() >= parallel_threshold)
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let _result = node_indices
+        .into_par_iter()
+        .map(|node_s| shortest_path_for_edge_centrality(&graph, &node_s))
+        .for_each(|mut shortest_path_calc| {
+            accumulate_edges(
+                &locked_betweenness,
+                max_index,
+                &mut shortest_path_calc,
+                &graph,
+            );
+        });
+
+    #[cfg(target_arch = "wasm32")]
+    let _result = node_indices
+        .into_iter()
         .map(|node_s| shortest_path_for_edge_centrality(&graph, &node_s))
         .for_each(|mut shortest_path_calc| {
             accumulate_edges(
@@ -606,7 +624,7 @@ mod test_edge_betweenness_centrality {
         let result = output.iter().map(|x| x.unwrap()).collect::<Vec<f64>>();
         let expected_values = [0.2, 0.2, 0.1, 0.1, 0.1, 0.05, 0.1, 0.3, 0.35, 0.2];
         for i in 0..10 {
-            assert_almost_equal!(result[i], expected_values[i], 1e-4);
+            assert_almost_equal!(expected_values[i], result[i], 1e-4);
         }
     }
 
@@ -628,7 +646,7 @@ mod test_edge_betweenness_centrality {
         let result = output.iter().map(|x| x.unwrap()).collect::<Vec<f64>>();
         let expected_values = [4.5, 3.0, 6.5, 1.5, 1.5, 1.5, 1.5, 4.5, 2.0, 7.5];
         for i in 0..10 {
-            assert_almost_equal!(result[i], expected_values[i], 1e-4);
+            assert_almost_equal!(expected_values[i], result[i], 1e-4);
         }
     }
 

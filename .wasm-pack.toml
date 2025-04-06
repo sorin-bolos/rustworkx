@@ -1,0 +1,5 @@
+[package]
+description = "A Python graph library implemented in Rust with WebAssembly support"
+
+[wasm]
+profiling = false

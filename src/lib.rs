@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -42,6 +42,35 @@ mod traversal;
 mod tree;
 mod union;
 
+// Conditionally import WebAssembly-specific modules
+#[cfg(target_arch = "wasm32")]
+mod wasm;
+
+// Import WebAssembly utilities
+mod web_utils;
+
+// Conditionally import PyO3 for non-WebAssembly targets
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::create_exception;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::exceptions::PyException;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::exceptions::PyValueError;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::import_exception;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::wrap_pyfunction;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::wrap_pymodule;
+#[cfg(not(target_arch = "wasm32"))]
+use pyo3::Python;
+
+// Import WebAssembly-specific dependencies
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
 use bisimulation::*;
 use cartesian_product::*;
 use centrality::*;
@@ -70,15 +99,6 @@ use union::*;
 
 use hashbrown::HashMap;
 use numpy::Complex64;
-
-use pyo3::create_exception;
-use pyo3::exceptions::PyException;
-use pyo3::exceptions::PyValueError;
-use pyo3::import_exception;
-use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
-use pyo3::wrap_pymodule;
-use pyo3::Python;
 
 use petgraph::graph::NodeIndex;
 use petgraph::prelude::*;
@@ -415,6 +435,7 @@ create_exception!(rustworkx, FailedToConverge, PyException);
 // Graph is not bipartite
 create_exception!(rustworkx, GraphNotBipartite, PyException);
 
+#[cfg(not(target_arch = "wasm32"))]
 #[pymodule]
 fn rustworkx(py: Python<'_>, m: &Bound<PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -660,5 +681,21 @@ fn rustworkx(py: Python<'_>, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<iterators::BiconnectedComponents>()?;
     m.add_class::<ColoringStrategy>()?;
     m.add_wrapped(wrap_pymodule!(generators::generators))?;
+
+    // Add the web utilities module
+    let web_module = PyModule::new(py, "web")?;
+    web_utils::web_utils(py, web_module)?;
+    m.add_submodule(web_module)?;
+
     Ok(())
+}
+
+// WASM-specific initialization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_init() {
+    // Set panic hook for better error messages
+    console_error_panic_hook::set_once();
+    // Call the wasm start function
+    wasm::wasm_start();
 }

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rustworkx Wheel Test in Pyodide</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+<body>
+    <h2>Testing Rustworkx Wheel in Pyodide</h2>
+    <div id="output" style="white-space: pre-wrap; font-family: monospace;"></div>
+    
+    <script type="text/javascript">
+        async function main() {
+            const output = document.getElementById("output");
+            output.textContent = "Loading Pyodide...\n";
+            
+            // Load Pyodide
+            const pyodide = await loadPyodide();
+            output.textContent += "Pyodide loaded.\n";
+            
+            try {
+                // First load the wasm module
+                output.textContent += "Loading WASM module...\n";
+                
+                // Import the JS glue code
+                const rustworkx_wasm_mod = await import('./rustworkx_wasm.js');
+                
+                // Load the WASM binary
+                const wasmResponse = await fetch('./rustworkx_wasm.wasm');
+                const wasmBytes = await wasmResponse.arrayBuffer();
+                
+                // Initialize the WASM module
+                const wasm_module = await rustworkx_wasm_mod.default(wasmBytes);
+                
+                // Instead of registering the module directly with Pyodide, make it available in globalThis
+                // which is accessible from Python's js namespace
+                globalThis.rustworkx_wasm = {
+                    PyGraph: {
+                        new: function() { return new wasm_module.PyGraph(); }
+                    },
+                    PyDiGraph: {
+                        new: function() { return new wasm_module.PyDiGraph(); }
+                    }
+                };
+                
+                // Add methods from prototypes to our wrapper objects
+                const pygraph_obj = new wasm_module.PyGraph();
+                for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(pygraph_obj))) {
+                    if (method !== 'constructor' && typeof pygraph_obj[method] === 'function') {
+                        globalThis.rustworkx_wasm.PyGraph[method] = function(instance, ...args) {
+                            return instance[method](...args);
+                        };
+                    }
+                }
+                
+                const pydigraph_obj = new wasm_module.PyDiGraph();
+                for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(pydigraph_obj))) {
+                    if (method !== 'constructor' && typeof pydigraph_obj[method] === 'function') {
+                        globalThis.rustworkx_wasm.PyDiGraph[method] = function(instance, ...args) {
+                            return instance[method](...args);
+                        };
+                    }
+                }
+                
+                output.textContent += "WASM module initialized in global scope.\n";
+                
+                // Install micropip
+                await pyodide.loadPackage("micropip");
+                output.textContent += "Installed micropip.\n";
+                
+                // Find the wheel file
+                const wheelFiles = await pyodide.runPythonAsync(`
+                    import glob
+                    glob.glob("*.whl")
+                `);
+                
+                if (wheelFiles.length === 0) {
+                    throw new Error("No wheel files found in current directory");
+                }
+                
+                const wheelFile = wheelFiles[0];
+                output.textContent += `Installing wheel from ${wheelFile}...\n`;
+                
+                // Install the wheel
+                await pyodide.runPythonAsync(`
+                    import micropip
+                    await micropip.install('${wheelFile}')
+                `);
+                
+                // Modify the wrapper.py to use the globally available instance
+                await pyodide.runPythonAsync(`
+                    # Helper function to patch the rustworkx wrapper
+                    def patch_wrapper():
+                        import pathlib
+                        import site
+                        
+                        # Find the site-packages directory
+                        packages_dir = site.getsitepackages()[0]
+                        wrapper_path = pathlib.Path(packages_dir) / "rustworkx" / "wrapper.py"
+                        
+                        # Modified wrapper content
+                        modified_content = '''
+"""
+Python wrapper classes for rustworkx WebAssembly bindings
+"""
+
+from js import rustworkx_wasm
+
+class PyGraph:
+    """
+    Undirected graph class mirroring functionality of the native PyGraph.
+    """
+    def __init__(self):
+        self._graph = rustworkx_wasm.PyGraph.new()
+    
+    def add_node(self, data):
+        """Add a node to the graph with the specified data."""
+        return rustworkx_wasm.PyGraph.add_node(self._graph, data)
+    
+    def add_edge(self, source, target, data):
+        """Add an edge between source and target nodes with the specified data."""
+        return rustworkx_wasm.PyGraph.add_edge(self._graph, source, target, data)
+    
+    def node_count(self):
+        """Return the number of nodes in the graph."""
+        return rustworkx_wasm.PyGraph.node_count(self._graph)
+    
+    def edge_count(self):
+        """Return the number of edges in the graph."""
+        return rustworkx_wasm.PyGraph.edge_count(self._graph)
+    
+    def is_connected(self):
+        """Check if the graph is connected."""
+        return rustworkx_wasm.PyGraph.is_connected(self._graph)
+
+    # ...existing code...
+
+class PyDiGraph:
+    """
+    Directed graph class mirroring functionality of the native PyDiGraph.
+    """
+    def __init__(self):
+        self._graph = rustworkx_wasm.PyDiGraph.new()
+    
+    def add_node(self, data):
+        """Add a node to the graph with the specified data."""
+        return rustworkx_wasm.PyDiGraph.add_node(self._graph, data)
+    
+    def add_edge(self, source, target, data):
+        """Add a directed edge from source to target with the specified data."""
+        return rustworkx_wasm.PyDiGraph.add_edge(self._graph, source, target, data)
+    
+    def node_count(self):
+        """Return the number of nodes in the graph."""
+        return rustworkx_wasm.PyDiGraph.node_count(self._graph)
+    
+    def edge_count(self):
+        """Return the number of edges in the graph."""
+        return rustworkx_wasm.PyDiGraph.edge_count(self._graph)
+
+    # ...existing code...
+'''
+                        # Write the modified content
+                        with open(wrapper_path, "w") as f:
+                            f.write(modified_content)
+                        
+                        return "Wrapper patched successfully"
+                    
+                    patch_result = patch_wrapper()
+                    print(patch_result)
+                `);
+                
+                // Test the package
+                const result = await pyodide.runPythonAsync(`
+                    try:
+                        import rustworkx as rx
+                        
+                        output = []
+                        output.append(f"Rustworkx version: {rx.__version__}")
+                        
+                        # Create a simple graph
+                        g = rx.PyGraph()
+                        n1 = g.add_node("Node 1")
+                        n2 = g.add_node("Node 2")
+                        e = g.add_edge(n1, n2, "Edge 1-2")
+                        
+                        output.append(f"Created graph with {g.node_count()} nodes and {g.edge_count()} edge")
+                        output.append(f"Graph is connected: {g.is_connected()}")
+                        
+                        # Create a directed graph
+                        dg = rx.PyDiGraph()
+                        n1 = dg.add_node("Node 1")
+                        n2 = dg.add_node("Node 2")
+                        n3 = dg.add_node("Node 3")
+                        e1 = dg.add_edge(n1, n2, "Edge 1->2")
+                        e2 = dg.add_edge(n2, n3, "Edge 2->3")
+                        
+                        output.append(f"DiGraph created with {dg.node_count()} nodes and {dg.edge_count()} edges")
+                        
+                        # Test generators
+                        path = rx.path_graph(5)
+                        output.append(f"Path graph has {path.node_count()} nodes and {path.edge_count()} edges")
+                        
+                        cycle = rx.cycle_graph(6)
+                        output.append(f"Cycle graph has {cycle.node_count()} nodes and {cycle.edge_count()} edges")
+                        
+                        complete = rx.complete_graph(4)
+                        output.append(f"Complete graph has {complete.node_count()} nodes and {complete.edge_count()} edges")
+                        
+                        "\\n".join(output)
+                    except Exception as e:
+                        import traceback
+                        tb = traceback.format_exc()
+                        f"Error: {e}\\n{tb}"
+                `);
+                
+                output.textContent += result;
+                output.textContent += "\n\nTests completed!";
+            } catch (error) {
+                output.textContent += "Error: " + error + "\n";
+                console.error(error);
+            }
+        }
+        
+        main();
+    </script>
+</body>
+</html>

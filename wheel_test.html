@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rustworkx Wheel Test in Pyodide</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+<body>
+    <h2>Testing Rustworkx Wheel in Pyodide</h2>
+    <div id="output" style="white-space: pre-wrap; font-family: monospace;"></div>
+    
+    <script type="text/javascript">
+        async function main() {
+            const output = document.getElementById("output");
+            output.textContent = "Loading Pyodide...\n";
+            
+            // Load Pyodide
+            const pyodide = await loadPyodide();
+            output.textContent += "Pyodide loaded.\n";
+            
+            try {
+                // Install micropip
+                await pyodide.loadPackage("micropip");
+                output.textContent += "Installed micropip.\n";
+                
+                // Install the wheel
+                const wheelPath = './build/pyodide/rustworkx-0.17.0-py3-none-any.whl';
+                output.textContent += `Installing wheel from ${wheelPath}...\n`;
+                
+                const result = await pyodide.runPythonAsync(`
+import micropip
+import sys
+import os
+
+try:
+    # First load the JS module
+    from js import rustworkx_wasm
+    print("JS module loaded successfully")
+    
+    # Install the wheel
+    await micropip.install('${wheelPath}')
+    print("Successfully installed rustworkx wheel")
+    
+    # Try importing and using rustworkx
+    import rustworkx as rx
+    print(f"Successfully imported rustworkx, version: {rx.__version__}")
+    
+    # Test basic functionality
+    g = rx.PyGraph()
+    n1 = g.add_node("Node 1")
+    n2 = g.add_node("Node 2")
+    e = g.add_edge(n1, n2, "Edge 1-2")
+    
+    print(f"Created graph with {g.node_count()} nodes and {g.edge_count()} edge")
+    print(f"Graph is connected: {g.is_connected()}")
+    
+    # Create a directed graph
+    dg = rx.PyDiGraph()
+    n1 = dg.add_node("Node 1")
+    n2 = dg.add_node("Node 2")
+    n3 = dg.add_node("Node 3")
+    e1 = dg.add_edge(n1, n2, "Edge 1→2")
+    e2 = dg.add_edge(n2, n3, "Edge 2→3")
+    
+    print(f"DiGraph created with {dg.node_count()} nodes and {dg.edge_count()} edges")
+    
+    # If we got here, everything worked
+    print("All tests completed successfully!")
+except Exception as e:
+    import traceback
+    print(f"Error: {e}")
+    print(traceback.format_exc())
+                `);
+                
+                output.textContent += result;
+            } catch (error) {
+                output.textContent += "Error: " + error;
+                console.error(error);
+            }
+        }
+        
+        main();
+    </script>
+</body>
+</html>

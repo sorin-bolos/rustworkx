@@ -13,7 +13,9 @@ license.workspace = true
 [workspace]
 members = [
     "rustworkx-core",
+    "wasm",
 ]
+resolver = "2"
 
 [workspace.package]
 version = "0.17.0"
@@ -24,12 +26,12 @@ repository = "https://github.com/Qiskit/rustworkx"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-ahash = "0.8.6"
-fixedbitset = "0.5.7"
-indexmap = { version = ">=1.9, <3", features = ["rayon"] }
-ndarray = { version = "0.16.1", features = ["rayon"] }
+ahash = ">=0.7, <0.9"
+fixedbitset = "0.5"
+indexmap = { version = "^2.0", features = ["rayon"] }
+ndarray = { version = "0.15", features = ["rayon"] }
 num-traits = "0.2"
-petgraph = "0.7.0"
+petgraph = "0.6"
 hashbrown = { version = ">=0.13, <0.16", features = ["rayon"] }
 numpy = "0.23"
 rand = "0.8"
@@ -39,6 +41,17 @@ rayon = "1.10"
 [lib]
 name = "rustworkx"
 crate-type = ["cdylib"]
+
+# Define WebAssembly features
+[features]
+wasm = [
+    "dep:wasm-bindgen", 
+    "dep:getrandom", 
+    "dep:js-sys", 
+    "dep:web-sys",
+    "rustworkx-core/wasm"
+]
+default = []
 
 [dependencies]
 ahash.workspace = true
@@ -64,7 +77,22 @@ flate2 = "1.0.35"
 
 [dependencies.pyo3]
 version = "0.23"
-features = ["abi3-py39", "extension-module", "hashbrown", "num-bigint", "num-complex", "indexmap", "py-clone"]
+features = ["hashbrown", "num-bigint", "num-complex", "indexmap"]
+optional = true
+
+# WebAssembly-specific dependencies
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = { version = "0.2.87", optional = true }
+getrandom = { version = "0.2", features = ["js"], optional = true }
+js-sys = { version = "0.3.64", optional = true }
+web-sys = { version = "0.3.64", features = ["console"], optional = true }
+console_error_panic_hook = "0.1.7"
+# Remove threading for wasm
+rayon = { workspace = true, optional = true }
+
+# Only include pyo3 for non-WebAssembly targets
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pyo3 = { version = "0.23", features = ["abi3-py39", "extension-module", "hashbrown", "num-bigint", "num-complex", "indexmap", "py-clone"] }
 
 [dependencies.sprs]
 version = "^0.11"
@@ -74,3 +102,17 @@ features = ["multi_thread"]
 [profile.release]
 lto = 'fat'
 codegen-units = 1
+
+# WebAssembly-specific profile settings
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'  # Optimize for size
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+# Development profile for WebAssembly
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 0
+debug = true

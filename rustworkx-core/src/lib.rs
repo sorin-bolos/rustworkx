@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -117,6 +117,17 @@ pub mod token_swapper;
 pub mod utils;
 
 pub mod steiner_tree;
+
+// WebAssembly compatibility module
+#[cfg(any(target_arch = "wasm32", doc))]
+pub mod wasm_compat;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use rayon;
+
+// Re-export compatibility layer
+#[cfg(target_arch = "wasm32")]
+pub use wasm_compat::parallel;
 
 // re-export petgraph so there is a consistent version available to users and
 // then only need to require rustworkx-core in their dependencies

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rustworkx WebAssembly Test</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+<body>
+  <h1>Rustworkx WebAssembly Test</h1>
+  <p>Check the browser console for output.</p>
+  <script type="text/javascript">
+    async function main() {
+      // Load pyodide
+      let pyodide = await loadPyodide();
+      console.log("Pyodide loaded");
+      
+      // Copy the rustworkx wasm build to the virtual filesystem
+      await pyodide.unpackArchive(
+        fetch("build/pyodide/rustworkx.wasm"), 
+        "wasm"
+      );
+      
+      // Add the package location to sys.path
+      await pyodide.runPythonAsync(`
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.getcwd(), "build/pyodide"))
+      `);
+      
+      // Install numpy which is a dependency
+      await pyodide.loadPackage("numpy");
+      
+      // Try to import and use rustworkx
+      const result = await pyodide.runPythonAsync(`
+        try:
+          import rustworkx as rx
+          
+          # Create a simple graph
+          g = rx.PyGraph()
+          n1 = g.add_node("Node 1")
+          n2 = g.add_node("Node 2")
+          g.add_edge(n1, n2, "Edge")
+          
+          # Run a basic algorithm
+          result = rx.is_connected(g)
+          
+          print(f"Created graph with {g.node_count()} nodes and {g.edge_count()} edges")
+          print(f"Graph is connected: {result}")
+          
+          "SUCCESS: rustworkx WebAssembly build works!"
+        except Exception as e:
+          import traceback
+          traceback.print_exc()
+          f"ERROR: {str(e)}"
+      `);
+      
+      console.log(result);
+    }
+    
+    main();
+  </script>
+</body>
+</html>

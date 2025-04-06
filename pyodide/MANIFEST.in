@@ -1,0 +1,2 @@
+include rustworkx/*.wasm
+include rustworkx/*.js

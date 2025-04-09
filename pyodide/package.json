@@ -1,0 +1,15 @@
+{
+  "name": "rustworkx",
+  "version": "0.17.0",
+  "description": "A high-performance graph library for Python, written in Rust",
+  "main": "python/rustworkx/__init__.py",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Qiskit/rustworkx"
+  },
+  "author": "Matthew Treinish",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "numpy": ">=1.16.0,<3"
+  }
+}

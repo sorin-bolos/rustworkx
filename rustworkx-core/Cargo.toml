@@ -11,6 +11,11 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 
+[features]
+default = []
+# Feature flag for WebAssembly compilation
+wasm = []
+
 [dependencies]
 ahash.workspace = true
 fixedbitset.workspace = true

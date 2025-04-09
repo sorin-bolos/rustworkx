@@ -7,6 +7,7 @@
 # that they have been altered from the originals.
 
 import os
+import sys
 
 from setuptools import setup
 from setuptools_rust import Binding, RustExtension
@@ -15,6 +16,9 @@ from setuptools_rust import Binding, RustExtension
 # If RUST_DEBUG is set, force compiling in debug mode. Else, use the default    behavior of whether
 # it's an editable installation.
 rustworkx_debug = True if os.getenv("RUSTWORKX_DEBUG") == "1" else None
+
+# Check if we're building for Pyodide/WebAssembly
+is_pyodide = os.getenv("PYODIDE", "0") == "1"
 
 
 def readme():
@@ -29,9 +33,25 @@ PKG_NAME = os.getenv("RUSTWORKX_PKG_NAME", "rustworkx")
 PKG_VERSION = "0.17.0"
 PKG_PACKAGES = ["rustworkx", "rustworkx.visualization"]
 PKG_INSTALL_REQUIRES = ["numpy>=1.16.0,<3"]
-RUST_EXTENSIONS = [RustExtension("rustworkx.rustworkx", "Cargo.toml",
-                                 binding=Binding.PyO3, debug=rustworkx_debug)]
-RUST_OPTS ={"bdist_wheel": {"py_limited_api": "cp39"}}
+
+# Configure Rust extension with appropriate options for Pyodide/Wasm if needed
+rust_extension_kwargs = {
+    "binding": Binding.PyO3,
+    "debug": rustworkx_debug,
+}
+
+# Add Wasm-specific build configuration
+if is_pyodide:
+    rust_extension_kwargs.update({
+        "features": ["wasm"],  # Optional feature for conditional Wasm compilation
+        # Pass additional cargo flags for wasm32 target
+        "rustc_flags": ["--target=wasm32-unknown-emscripten"],
+    })
+
+RUST_EXTENSIONS = [RustExtension("rustworkx.rustworkx", "Cargo.toml", **rust_extension_kwargs)]
+
+# For Pyodide, we need to adjust the Python limited API configuration
+RUST_OPTS = {"bdist_wheel": {"py_limited_api": "cp39"}} if not is_pyodide else {}
 
 retworkx_readme_compat = """# retworkx
 

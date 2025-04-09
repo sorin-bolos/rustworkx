@@ -76,6 +76,7 @@ Contents:
    Rustworkx Tutorials and Guides <tutorial/index>
    Rustworkx API <api/index>
    Visualization <visualization>
+   Pyodide / WebAssembly Support <pyodide>
    Release Notes <release_notes>
    Contributing Guide <CONTRIBUTING>
    rustworkx for NetworkX users <networkx>

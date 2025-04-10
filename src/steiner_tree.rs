@@ -5,14 +5,15 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
 use std::cmp::Ordering;
 
 use hashbrown::HashMap;
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use pyo3::exceptions::PyValueError;
@@ -205,11 +206,27 @@ fn deduplicate_edges(
                 let weight = raw.extract(py)?;
                 edges.push((edge.0, weight));
             }
-            edges.par_sort_unstable_by(|a, b| {
-                let weight_a = a.1;
-                let weight_b = b.1;
-                weight_a.partial_cmp(&weight_b).unwrap_or(Ordering::Less)
-            });
+            
+            // Use parallel sort only when not targeting WebAssembly
+            #[cfg(not(feature = "wasm"))]
+            {
+                edges.par_sort_unstable_by(|a, b| {
+                    let weight_a = a.1;
+                    let weight_b = b.1;
+                    weight_a.partial_cmp(&weight_b).unwrap_or(Ordering::Less)
+                });
+            }
+            
+            // Use sequential sort when targeting WebAssembly
+            #[cfg(feature = "wasm")]
+            {
+                edges.sort_unstable_by(|a, b| {
+                    let weight_a = a.1;
+                    let weight_b = b.1;
+                    weight_a.partial_cmp(&weight_b).unwrap_or(Ordering::Less)
+                });
+            }
+            
             edges[1..].iter().for_each(|x| {
                 out_graph.graph.remove_edge(x.0);
             });

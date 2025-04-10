@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -23,6 +23,7 @@ use petgraph::visit::{IntoEdgeReferences, NodeIndexable};
 use petgraph::EdgeType;
 
 use ndarray::prelude::*;
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use crate::iterators::{AllPairsPathLengthMapping, PathLengthMapping};
@@ -101,7 +102,10 @@ pub fn floyd_warshall<Ty: EdgeType>(
     // Perform the Floyd-Warshall algorithm.
     // In each loop, this finds the shortest path from point i
     // to point j using intermediate nodes 0..k
-    if n < parallel_threshold {
+    
+    // For both WebAssembly and small matrices, use sequential execution
+    #[cfg(feature = "wasm")]
+    {
         for k in 0..n {
             let row_k = mat.get(k).cloned().unwrap_or_default();
             mat.iter_mut().for_each(|row_i| {
@@ -113,17 +117,35 @@ pub fn floyd_warshall<Ty: EdgeType>(
                 }
             })
         }
-    } else {
-        for k in 0..n {
-            let row_k = mat.get(k).cloned().unwrap_or_default();
-            mat.par_iter_mut().for_each(|row_i| {
-                if let Some(m_ik) = row_i.get(&k).cloned() {
-                    for (j, m_kj) in row_k.iter() {
-                        let m_ikj = m_ik + *m_kj;
-                        insert_or_minimize!(row_i, *j, m_ikj);
+    }
+    
+    // For non-WebAssembly, use parallel execution only if the matrix is large enough
+    #[cfg(not(feature = "wasm"))]
+    {
+        if n < parallel_threshold {
+            for k in 0..n {
+                let row_k = mat.get(k).cloned().unwrap_or_default();
+                mat.iter_mut().for_each(|row_i| {
+                    if let Some(m_ik) = row_i.get(&k).cloned() {
+                        for (j, m_kj) in row_k.iter() {
+                            let m_ikj = m_ik + *m_kj;
+                            insert_or_minimize!(row_i, *j, m_ikj);
+                        }
                     }
-                }
-            })
+                })
+            }
+        } else {
+            for k in 0..n {
+                let row_k = mat.get(k).cloned().unwrap_or_default();
+                mat.par_iter_mut().for_each(|row_i| {
+                    if let Some(m_ik) = row_i.get(&k).cloned() {
+                        for (j, m_kj) in row_k.iter() {
+                            let m_ikj = m_ik + *m_kj;
+                            insert_or_minimize!(row_i, *j, m_ikj);
+                        }
+                    }
+                })
+            }
         }
     }
 
@@ -180,10 +202,10 @@ pub fn floyd_warshall_numpy<Ty: EdgeType>(
     for x in mat.diag_mut() {
         *x = 0.0;
     }
-    // Perform the Floyd-Warshall algorithm.
-    // In each loop, this finds the shortest path from point i
-    // to point j using intermediate nodes 0..k
-    if n < parallel_threshold {
+    
+    // For WebAssembly or when the matrix is small, use sequential algorithm
+    #[cfg(feature = "wasm")]
+    {
         for k in 0..n {
             for i in 0..n {
                 for j in 0..n {
@@ -197,43 +219,64 @@ pub fn floyd_warshall_numpy<Ty: EdgeType>(
                 }
             }
         }
-    } else if let Some(next) = next.as_mut() {
-        for k in 0..n {
-            let row_k = mat.slice(s![k, ..]).to_owned();
-            mat.axis_iter_mut(Axis(0))
-                .into_par_iter()
-                .zip(next.axis_iter_mut(Axis(0)))
-                .for_each(|(mut row_i, mut next_i)| {
-                    let m_ik = row_i[k];
-                    let next_ik = next_i[k];
-                    row_i
-                        .iter_mut()
-                        .zip(row_k.iter())
-                        .zip(next_i.iter_mut())
-                        .for_each(|((m_ij, m_kj), next_ij)| {
+    }
+    
+    // For non-WebAssembly, choose between parallel and sequential based on size
+    #[cfg(not(feature = "wasm"))]
+    {
+        if n < parallel_threshold {
+            for k in 0..n {
+                for i in 0..n {
+                    for j in 0..n {
+                        let d_ijk = mat[[i, k]] + mat[[k, j]];
+                        if d_ijk < mat[[i, j]] {
+                            mat[[i, j]] = d_ijk;
+                            if let Some(next) = next.as_mut() {
+                                next[[i, j]] = next[[i, k]];
+                            }
+                        }
+                    }
+                }
+            }
+        } else if let Some(next) = next.as_mut() {
+            for k in 0..n {
+                let row_k = mat.slice(s![k, ..]).to_owned();
+                mat.axis_iter_mut(Axis(0))
+                    .into_par_iter()
+                    .zip(next.axis_iter_mut(Axis(0)))
+                    .for_each(|(mut row_i, mut next_i)| {
+                        let m_ik = row_i[k];
+                        let next_ik = next_i[k];
+                        row_i
+                            .iter_mut()
+                            .zip(row_k.iter())
+                            .zip(next_i.iter_mut())
+                            .for_each(|((m_ij, m_kj), next_ij)| {
+                                let d_ijk = m_ik + *m_kj;
+                                if d_ijk < *m_ij {
+                                    *m_ij = d_ijk;
+                                    *next_ij = next_ik;
+                                }
+                            })
+                    })
+            }
+        } else {
+            for k in 0..n {
+                let row_k = mat.slice(s![k, ..]).to_owned();
+                mat.axis_iter_mut(Axis(0))
+                    .into_par_iter()
+                    .for_each(|mut row_i| {
+                        let m_ik = row_i[k];
+                        row_i.iter_mut().zip(row_k.iter()).for_each(|(m_ij, m_kj)| {
                             let d_ijk = m_ik + *m_kj;
                             if d_ijk < *m_ij {
                                 *m_ij = d_ijk;
-                                *next_ij = next_ik;
                             }
                         })
-                })
-        }
-    } else {
-        for k in 0..n {
-            let row_k = mat.slice(s![k, ..]).to_owned();
-            mat.axis_iter_mut(Axis(0))
-                .into_par_iter()
-                .for_each(|mut row_i| {
-                    let m_ik = row_i[k];
-                    row_i.iter_mut().zip(row_k.iter()).for_each(|(m_ij, m_kj)| {
-                        let d_ijk = m_ik + *m_kj;
-                        if d_ijk < *m_ij {
-                            *m_ij = d_ijk;
-                        }
                     })
-                })
+            }
         }
     }
+    
     Ok((mat, next))
 }

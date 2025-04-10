@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -17,6 +17,7 @@ use hashbrown::{HashMap, HashSet};
 use ndarray::prelude::*;
 use petgraph::prelude::*;
 use petgraph::EdgeType;
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use crate::NodesRemoved;
@@ -97,18 +98,32 @@ pub fn compute_distance_matrix<Ty: EdgeType + Sync>(
             level += 1
         }
     };
-    if n < parallel_threshold {
+
+    #[cfg(feature = "wasm")]
+    {
+        // Always use sequential execution in WebAssembly
         matrix
             .axis_iter_mut(Axis(0))
-            .enumerate()
-            .for_each(|(index, row)| bfs_traversal(index, row));
-    } else {
-        // Parallelize by row and iterate from each row index in BFS order
-        matrix
-            .axis_iter_mut(Axis(0))
-            .into_par_iter()
             .enumerate()
             .for_each(|(index, row)| bfs_traversal(index, row));
     }
+
+    #[cfg(not(feature = "wasm"))]
+    {
+        if n < parallel_threshold {
+            matrix
+                .axis_iter_mut(Axis(0))
+                .enumerate()
+                .for_each(|(index, row)| bfs_traversal(index, row));
+        } else {
+            // Parallelize by row and iterate from each row index in BFS order
+            matrix
+                .axis_iter_mut(Axis(0))
+                .into_par_iter()
+                .enumerate()
+                .for_each(|(index, row)| bfs_traversal(index, row));
+        }
+    }
+
     matrix
 }

@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -15,6 +15,7 @@ use std::convert::Infallible;
 use std::hash::Hash;
 
 use hashbrown::{HashMap, HashSet};
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
@@ -75,7 +76,46 @@ where
         .node_identifiers()
         .map(|n| NodeIndexable::to_index(&graph, n))
         .collect();
-    Ok(node_indices
+
+    #[cfg(feature = "wasm")]
+    let result: AllPairsDijkstraReturn = node_indices
+        .into_iter()
+        .map(|x| {
+            let mut paths: DictMap<G::NodeId, Vec<G::NodeId>> =
+                DictMap::with_capacity(graph.node_count());
+            let distances: DictMap<G::NodeId, f64> = dijkstra(
+                graph,
+                NodeIndexable::from_index(&graph, x),
+                None,
+                edge_cost,
+                Some(&mut paths),
+            )
+            .unwrap();
+            (
+                x,
+                (
+                    paths
+                        .into_iter()
+                        .map(|(k, v)| {
+                            (
+                                NodeIndexable::to_index(&graph, k),
+                                v.into_iter()
+                                    .map(|n| NodeIndexable::to_index(&graph, n))
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                    distances
+                        .into_iter()
+                        .map(|(k, v)| (NodeIndexable::to_index(&graph, k), v))
+                        .collect(),
+                ),
+            )
+        })
+        .collect();
+
+    #[cfg(not(feature = "wasm"))]
+    let result: AllPairsDijkstraReturn = node_indices
         .into_par_iter()
         .map(|x| {
             let mut paths: DictMap<G::NodeId, Vec<G::NodeId>> =
@@ -109,7 +149,9 @@ where
                 ),
             )
         })
-        .collect())
+        .collect();
+
+    Ok(result)
 }
 
 struct MetricClosureEdge {
@@ -424,6 +466,14 @@ where
     }
 
     // if parallel edges, keep the edge with minimum distance.
+    #[cfg(feature = "wasm")]
+    out_edges.sort_unstable_by(|a, b| {
+        let weight_a = (a.source, a.target, a.distance);
+        let weight_b = (b.source, b.target, b.distance);
+        weight_a.partial_cmp(&weight_b).unwrap_or(Ordering::Less)
+    });
+
+    #[cfg(not(feature = "wasm"))]
     out_edges.par_sort_unstable_by(|a, b| {
         let weight_a = (a.source, a.target, a.distance);
         let weight_b = (b.source, b.target, b.distance);
@@ -545,11 +595,21 @@ where
     let node_bound = graph.node_bound();
     let mut edge_list = fast_metric_edges(graph, terminal_nodes, weight_fn)?;
     let mut subgraphs = UnionFind::<usize>::new(node_bound);
+
+    #[cfg(feature = "wasm")]
+    edge_list.sort_unstable_by(|a, b| {
+        let weight_a = (a.distance, a.source, a.target);
+        let weight_b = (b.distance, b.source, b.target);
+        weight_a.partial_cmp(&weight_b).unwrap_or(Ordering::Less)
+    });
+
+    #[cfg(not(feature = "wasm"))]
     edge_list.par_sort_unstable_by(|a, b| {
         let weight_a = (a.distance, a.source, a.target);
         let weight_b = (b.distance, b.source, b.target);
         weight_a.partial_cmp(&weight_b).unwrap_or(Ordering::Less)
     });
+
     let mut mst_edges: Vec<MetricClosureEdge> = Vec::new();
     for float_edge_pair in edge_list {
         let u = float_edge_pair.source;

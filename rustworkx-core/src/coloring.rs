@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -28,6 +28,7 @@ use petgraph::visit::{
     IntoNodeIdentifiers, NodeCount, NodeIndexable,
 };
 use petgraph::{Incoming, Outgoing};
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 /// Compute a two-coloring of a graph
@@ -150,6 +151,11 @@ where
         node_vec.push(k);
         sort_map.insert(k, graph.edges(k).count());
     }
+    
+    #[cfg(feature = "wasm")]
+    node_vec.sort_by_key(|k| Reverse(sort_map.get(k)));
+    
+    #[cfg(not(feature = "wasm"))]
     node_vec.par_sort_by_key(|k| Reverse(sort_map.get(k)));
 
     for node in node_vec {

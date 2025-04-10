@@ -105,7 +105,13 @@ where
     let locked_betweenness = RwLock::new(&mut betweenness);
     let node_indices: Vec<G::NodeId> = graph.node_identifiers().collect();
 
-    CondIterator::new(node_indices, graph.node_count() >= parallel_threshold)
+    // Ensure sequential execution when targeting WebAssembly
+    #[cfg(feature = "wasm")]
+    let use_parallel = false;
+    #[cfg(not(feature = "wasm"))]
+    let use_parallel = graph.node_count() >= parallel_threshold;
+
+    CondIterator::new(node_indices, use_parallel)
         .map(|node_s| (shortest_path_for_centrality(&graph, &node_s), node_s))
         .for_each(|(mut shortest_path_calc, node_s)| {
             _accumulate_vertices(
@@ -195,7 +201,14 @@ where
     }
     let locked_betweenness = RwLock::new(&mut betweenness);
     let node_indices: Vec<G::NodeId> = graph.node_identifiers().collect();
-    CondIterator::new(node_indices, graph.node_count() >= parallel_threshold)
+
+    // Ensure sequential execution when targeting WebAssembly
+    #[cfg(feature = "wasm")]
+    let use_parallel = false;
+    #[cfg(not(feature = "wasm"))]
+    let use_parallel = graph.node_count() >= parallel_threshold;
+
+    CondIterator::new(node_indices, use_parallel)
         .map(|node_s| shortest_path_for_edge_centrality(&graph, &node_s))
         .for_each(|mut shortest_path_calc| {
             accumulate_edges(
@@ -606,7 +619,7 @@ mod test_edge_betweenness_centrality {
         let result = output.iter().map(|x| x.unwrap()).collect::<Vec<f64>>();
         let expected_values = [0.2, 0.2, 0.1, 0.1, 0.1, 0.05, 0.1, 0.3, 0.35, 0.2];
         for i in 0..10 {
-            assert_almost_equal!(result[i], expected_values[i], 1e-4);
+            assert_almost_equal!(expected_values[i], result[i], 1e-4);
         }
     }
 
@@ -628,7 +641,7 @@ mod test_edge_betweenness_centrality {
         let result = output.iter().map(|x| x.unwrap()).collect::<Vec<f64>>();
         let expected_values = [4.5, 3.0, 6.5, 1.5, 1.5, 1.5, 1.5, 4.5, 2.0, 7.5];
         for i in 0..10 {
-            assert_almost_equal!(result[i], expected_values[i], 1e-4);
+            assert_almost_equal!(expected_values[i], result[i], 1e-4);
         }
     }
 

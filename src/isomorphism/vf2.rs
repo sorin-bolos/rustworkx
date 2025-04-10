@@ -31,6 +31,7 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences, NodeIndexable};
 use petgraph::EdgeType;
 use petgraph::{Directed, Incoming, Outgoing, Undirected};
 
+#[cfg(not(feature = "wasm"))]
 use rayon::slice::ParallelSliceMut;
 
 use crate::iterators::NodeMap;
@@ -256,7 +257,15 @@ where
         };
 
         let mut sorted_nodes: Vec<usize> = graph.node_indices().map(|node| node.index()).collect();
+        
+        // Use parallel sorting for non-WebAssembly builds
+        #[cfg(not(feature = "wasm"))]
         sorted_nodes.par_sort_by_key(|&node| (d_out[node], d_in[node], Reverse(node)));
+        
+        // Use sequential sorting for WebAssembly builds
+        #[cfg(feature = "wasm")]
+        sorted_nodes.sort_by_key(|&node| (d_out[node], d_in[node], Reverse(node)));
+        
         sorted_nodes.reverse();
 
         for node in sorted_nodes {

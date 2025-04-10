@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -16,6 +16,7 @@ use hashbrown::HashSet;
 use pyo3::prelude::*;
 
 use petgraph::graph::NodeIndex;
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 fn _graph_triangles(graph: &graph::PyGraph, node: usize) -> (usize, usize) {
@@ -52,6 +53,7 @@ fn _graph_triangles(graph: &graph::PyGraph, node: usize) -> (usize, usize) {
 /// A “connected triple” means a single vertex with
 /// edges running to an unordered pair of others.
 ///
+#[cfg(not(feature = "wasm"))]
 /// This function is multithreaded and will run
 /// launch a thread pool with threads equal to the number of CPUs by default.
 /// You can tune the number of threads with the ``RAYON_NUM_THREADS``
@@ -72,11 +74,22 @@ fn _graph_triangles(graph: &graph::PyGraph, node: usize) -> (usize, usize) {
 #[pyo3(text_signature = "(graph, /)")]
 pub fn graph_transitivity(graph: &graph::PyGraph) -> f64 {
     let node_indices: Vec<NodeIndex> = graph.graph.node_indices().collect();
+    
+    #[cfg(not(feature = "wasm"))]
     let (triangles, triples) = node_indices
         .par_iter()
         .map(|node| _graph_triangles(graph, node.index()))
         .reduce(
             || (0, 0),
+            |(sumx, sumy), (resx, resy)| (sumx + resx, sumy + resy),
+        );
+    
+    #[cfg(feature = "wasm")]
+    let (triangles, triples) = node_indices
+        .iter()
+        .map(|node| _graph_triangles(graph, node.index()))
+        .fold(
+            (0, 0),
             |(sumx, sumy), (resx, resy)| (sumx + resx, sumy + resy),
         );
 
@@ -150,6 +163,7 @@ fn _digraph_triangles(graph: &digraph::PyDiGraph, node: usize) -> (usize, usize)
 /// A triangle is a connected triple of nodes.
 /// Different edge orientations counts as different triangles.
 ///
+#[cfg(not(feature = "wasm"))]
 /// This function is multithreaded and will run
 /// launch a thread pool with threads equal to the number of CPUs by default.
 /// You can tune the number of threads with the ``RAYON_NUM_THREADS``
@@ -173,11 +187,22 @@ fn _digraph_triangles(graph: &digraph::PyDiGraph, node: usize) -> (usize, usize)
 #[pyo3(text_signature = "(graph, /)")]
 pub fn digraph_transitivity(graph: &digraph::PyDiGraph) -> f64 {
     let node_indices: Vec<NodeIndex> = graph.graph.node_indices().collect();
+    
+    #[cfg(not(feature = "wasm"))]
     let (triangles, triples) = node_indices
         .par_iter()
         .map(|node| _digraph_triangles(graph, node.index()))
         .reduce(
             || (0, 0),
+            |(sumx, sumy), (resx, resy)| (sumx + resx, sumy + resy),
+        );
+        
+    #[cfg(feature = "wasm")]
+    let (triangles, triples) = node_indices
+        .iter()
+        .map(|node| _digraph_triangles(graph, node.index()))
+        .fold(
+            (0, 0),
             |(sumx, sumy), (resx, resy)| (sumx + resx, sumy + resy),
         );
 

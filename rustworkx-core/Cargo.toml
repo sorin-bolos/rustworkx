@@ -19,7 +19,7 @@ wasm = []
 [dependencies]
 ahash.workspace = true
 fixedbitset.workspace = true
-hashbrown.workspace = true
+hashbrown = { workspace = true, features = ["raw"] }
 indexmap.workspace = true
 ndarray.workspace = true
 num-traits.workspace = true
@@ -27,5 +27,12 @@ petgraph.workspace = true
 priority-queue = "2.1"
 rand.workspace = true
 rand_pcg.workspace = true
-rayon.workspace = true
+rayon = { workspace = true, optional = true }
 rayon-cond = "0.3"
+
+# Enable rayon features only when not targeting WebAssembly
+[target.'cfg(not(feature = "wasm"))'.dependencies]
+hashbrown = { workspace = true, features = ["raw", "rayon"] }
+indexmap = { workspace = true, features = ["rayon"] }
+ndarray = { workspace = true, features = ["rayon"] }
+rayon = { workspace = true }

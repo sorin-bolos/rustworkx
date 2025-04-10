@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -166,24 +166,26 @@ where
         let trial_seeds_vec: Vec<u64> =
             outer_rng.sample_iter(&Standard).take(self.trials).collect();
 
-        CondIterator::new(
-            trial_seeds_vec,
-            self.graph.node_count() >= self.parallel_threshold,
-        )
-        .map(|trial_seed| {
-            self.trial_map(
-                digraph.clone(),
-                sub_digraph.clone(),
-                tokens.clone(),
-                todo_nodes.clone(),
-                trial_seed,
-            )
-        })
-        .min_by_key(|result| match result {
-            Ok(res) => Ok(res.len()),
-            Err(e) => Err(*e),
-        })
-        .unwrap()
+        #[cfg(feature = "wasm")]
+        let use_parallel = false;
+        #[cfg(not(feature = "wasm"))]
+        let use_parallel = self.graph.node_count() >= self.parallel_threshold;
+
+        CondIterator::new(trial_seeds_vec, use_parallel)
+            .map(|trial_seed| {
+                self.trial_map(
+                    digraph.clone(),
+                    sub_digraph.clone(),
+                    tokens.clone(),
+                    todo_nodes.clone(),
+                    trial_seed,
+                )
+            })
+            .min_by_key(|result| match result {
+                Ok(res) => Ok(res.len()),
+                Err(e) => Err(*e),
+            })
+            .unwrap()
     }
 
     fn add_token_edges(

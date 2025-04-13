@@ -13,13 +13,12 @@ license.workspace = true
 
 [features]
 default = []
-# Feature flag for WebAssembly compilation
 wasm = []
 
 [dependencies]
 ahash.workspace = true
 fixedbitset.workspace = true
-hashbrown = { workspace = true, features = ["raw"] }
+hashbrown = "0.15.2"
 indexmap.workspace = true
 ndarray.workspace = true
 num-traits.workspace = true
@@ -30,9 +29,13 @@ rand_pcg.workspace = true
 rayon = { workspace = true, optional = true }
 rayon-cond = "0.3"
 
-# Enable rayon features only when not targeting WebAssembly
+# Configure dependencies for non-wasm builds
 [target.'cfg(not(feature = "wasm"))'.dependencies]
-hashbrown = { workspace = true, features = ["raw", "rayon"] }
+rayon = { workspace = true }
+hashbrown = { version = "0.15.2", features = ["rayon"] }
 indexmap = { workspace = true, features = ["rayon"] }
 ndarray = { workspace = true, features = ["rayon"] }
-rayon = { workspace = true }
+
+# Configure dependencies for wasm builds
+[target.'cfg(feature = "wasm")'.dependencies]
+hashbrown = "0.15.2"

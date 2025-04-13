@@ -44,8 +44,8 @@ rust_extension_kwargs = {
 if is_pyodide:
     rust_extension_kwargs.update({
         "features": ["wasm"],  # Optional feature for conditional Wasm compilation
-        # Pass additional cargo flags for wasm32 target
-        "rustc_flags": ["--target=wasm32-unknown-emscripten"],
+        # Don't include explicit target flag when using pyodide-build
+        # as it will be added by the build system
     })
 
 RUST_EXTENSIONS = [RustExtension("rustworkx.rustworkx", "Cargo.toml", **rust_extension_kwargs)]

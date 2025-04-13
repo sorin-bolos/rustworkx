@@ -5,28 +5,49 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations
-// under the License.
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use petgraph::EdgeType;
 
+use rand::distributions::Uniform;
 use rand::prelude::*;
+
+// Use different RNG implementations based on target
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
 use rand_pcg::Pcg64;
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+use rand::rngs::SmallRng;
 
 use crate::iterators::Pos2DMapping;
 use crate::StablePyGraph;
+
+// Add a conditional implementation for the RNG creation
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    match seed {
+        Some(seed_value) => Pcg64::seed_from_u64(seed_value),
+        None => Pcg64::from_entropy(),
+    }
+}
+
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    use rand::SeedableRng;
+    match seed {
+        Some(seed_value) => SmallRng::seed_from_u64(seed_value),
+        None => SmallRng::from_entropy(),
+    }
+}
 
 pub fn random_layout<Ty: EdgeType>(
     graph: &StablePyGraph<Ty>,
     center: Option<[f64; 2]>,
     seed: Option<u64>,
 ) -> Pos2DMapping {
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
 
     Pos2DMapping {
         pos_map: graph

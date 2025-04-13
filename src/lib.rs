@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -37,6 +37,8 @@ mod steiner_tree;
 mod tensor_product;
 mod token_swapper;
 mod toposort;
+// Only include transitivity module when not targeting WebAssembly
+#[cfg(not(feature = "wasm"))]
 mod transitivity;
 mod traversal;
 mod tree;
@@ -63,6 +65,8 @@ use shortest_path::*;
 use steiner_tree::*;
 use tensor_product::*;
 use token_swapper::*;
+// Only include transitivity module when not targeting WebAssembly
+#[cfg(not(feature = "wasm"))]
 use transitivity::*;
 use traversal::*;
 use tree::*;
@@ -506,9 +510,13 @@ fn rustworkx(py: Python<'_>, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(digraph_has_path))?;
     m.add_wrapped(wrap_pyfunction!(graph_dijkstra_shortest_path_lengths))?;
     m.add_wrapped(wrap_pyfunction!(digraph_dijkstra_shortest_path_lengths))?;
+    #[cfg(not(feature = "wasm"))]
     m.add_wrapped(wrap_pyfunction!(graph_bellman_ford_shortest_paths))?;
+    #[cfg(not(feature = "wasm"))]
     m.add_wrapped(wrap_pyfunction!(digraph_bellman_ford_shortest_paths))?;
+    #[cfg(not(feature = "wasm"))]
     m.add_wrapped(wrap_pyfunction!(graph_bellman_ford_shortest_path_lengths))?;
+    #[cfg(not(feature = "wasm"))]
     m.add_wrapped(wrap_pyfunction!(digraph_bellman_ford_shortest_path_lengths))?;
     m.add_wrapped(wrap_pyfunction!(negative_edge_cycle))?;
     m.add_wrapped(wrap_pyfunction!(find_negative_cycle))?;
@@ -584,7 +592,9 @@ fn rustworkx(py: Python<'_>, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(max_weight_matching))?;
     m.add_wrapped(wrap_pyfunction!(minimum_spanning_edges))?;
     m.add_wrapped(wrap_pyfunction!(minimum_spanning_tree))?;
+    #[cfg(not(feature = "wasm"))]
     m.add_wrapped(wrap_pyfunction!(graph_transitivity))?;
+    #[cfg(not(feature = "wasm"))]
     m.add_wrapped(wrap_pyfunction!(digraph_transitivity))?;
     m.add_wrapped(wrap_pyfunction!(graph_token_swapper))?;
     m.add_wrapped(wrap_pyfunction!(graph_core_number))?;

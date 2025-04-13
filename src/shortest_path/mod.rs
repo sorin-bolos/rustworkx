@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -1573,6 +1573,7 @@ pub fn graph_unweighted_average_shortest_path_length(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, node, edge_cost_fn, /, goal=None)", signature = (graph, node, edge_cost_fn, goal=None))]
 pub fn digraph_bellman_ford_shortest_path_lengths(
@@ -1638,6 +1639,21 @@ pub fn digraph_bellman_ford_shortest_path_lengths(
     })
 }
 
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, node, edge_cost_fn, /, goal=None)", signature = (graph, node, edge_cost_fn, goal=None))]
+pub fn digraph_bellman_ford_shortest_path_lengths(
+    py: Python,
+    graph: &digraph::PyDiGraph,
+    node: usize,
+    edge_cost_fn: PyObject,
+    goal: Option<usize>,
+) -> PyResult<PathLengthMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "digraph_bellman_ford_shortest_path_lengths is not supported in WebAssembly environment",
+    ))
+}
+
 /// Compute the lengths of the shortest paths for a PyGraph object using
 /// the Bellman-Ford algorithm with the SPFA heuristic.
 ///
@@ -1658,6 +1674,7 @@ pub fn digraph_bellman_ford_shortest_path_lengths(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, node, edge_cost_fn, /, goal=None)", signature = (graph, node, edge_cost_fn, goal=None))]
 pub fn graph_bellman_ford_shortest_path_lengths(
@@ -1723,6 +1740,21 @@ pub fn graph_bellman_ford_shortest_path_lengths(
     })
 }
 
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, node, edge_cost_fn, /, goal=None)", signature = (graph, node, edge_cost_fn, goal=None))]
+pub fn graph_bellman_ford_shortest_path_lengths(
+    py: Python,
+    graph: &graph::PyGraph,
+    node: usize,
+    edge_cost_fn: PyObject,
+    goal: Option<usize>,
+) -> PyResult<PathLengthMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "graph_bellman_ford_shortest_path_lengths is not supported in WebAssembly environment",
+    ))
+}
+
 /// Find the shortest path from a node
 ///
 /// This function will generate the shortest path from a source node using
@@ -1745,6 +1777,7 @@ pub fn graph_bellman_ford_shortest_path_lengths(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(
     signature=(graph, source, target=None, weight_fn=None, default_weight=1.0),
@@ -1804,6 +1837,25 @@ pub fn graph_bellman_ford_shortest_paths(
     })
 }
 
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(
+    signature=(graph, source, target=None, weight_fn=None, default_weight=1.0),
+    text_signature = "(graph, source, /, target=None, weight_fn=None, default_weight=1.0)"
+)]
+pub fn graph_bellman_ford_shortest_paths(
+    py: Python,
+    graph: &graph::PyGraph,
+    source: usize,
+    target: Option<usize>,
+    weight_fn: Option<PyObject>,
+    default_weight: f64,
+) -> PyResult<PathMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "graph_bellman_ford_shortest_paths is not supported in WebAssembly environment",
+    ))
+}
+
 /// Find the shortest path from a node
 ///
 /// This function will generate the shortest path from a source node using
@@ -1826,6 +1878,7 @@ pub fn graph_bellman_ford_shortest_paths(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(
     signature=(graph, source, target=None, weight_fn=None, default_weight=1.0, as_undirected=false),
@@ -1897,6 +1950,26 @@ pub fn digraph_bellman_ford_shortest_paths(
     })
 }
 
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(
+    signature=(graph, source, target=None, weight_fn=None, default_weight=1.0, as_undirected=false),
+    text_signature = "(graph, source, /, target=None, weight_fn=None, default_weight=1.0, as_undirected=False)"
+)]
+pub fn digraph_bellman_ford_shortest_paths(
+    py: Python,
+    graph: &digraph::PyDiGraph,
+    source: usize,
+    target: Option<usize>,
+    weight_fn: Option<PyObject>,
+    default_weight: f64,
+    as_undirected: bool,
+) -> PyResult<PathMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "digraph_bellman_ford_shortest_paths is not supported in WebAssembly environment",
+    ))
+}
+
 /// Check if a negative cycle exists on a graph
 ///
 /// This function will check for the existence of a negative cycle in a graph
@@ -1909,6 +1982,7 @@ pub fn digraph_bellman_ford_shortest_paths(
 ///
 /// :return: True if there is a negative cycle or False otherwise
 /// :rtype: bool
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
 pub fn negative_edge_cycle(
@@ -1930,6 +2004,19 @@ pub fn negative_edge_cycle(
     Ok(cycle.is_some())
 }
 
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
+pub fn negative_edge_cycle(
+    py: Python,
+    graph: &digraph::PyDiGraph,
+    edge_cost_fn: PyObject,
+) -> PyResult<bool> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "negative_edge_cycle is not supported in WebAssembly environment",
+    ))
+}
+
 /// Find a negative cycle of a graph
 ///
 /// This function will find an arbitrary negative cycle in a graph
@@ -1944,6 +2031,7 @@ pub fn negative_edge_cycle(
 /// :rtype: NodeIndices
 ///
 /// :raises: ValueError: when there is no cycle in the graph provided
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
 pub fn find_negative_cycle(
@@ -1971,6 +2059,19 @@ pub fn find_negative_cycle(
     Ok(NodeIndices {
         nodes: cycle.into_iter().map(|x| x.index()).collect(),
     })
+}
+
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
+pub fn find_negative_cycle(
+    py: Python,
+    graph: &digraph::PyDiGraph,
+    edge_cost_fn: PyObject,
+) -> PyResult<NodeIndices> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "find_negative_cycle is not supported in WebAssembly environment",
+    ))
 }
 
 /// For each node in the graph, calculates the lengths of the shortest paths
@@ -2003,6 +2104,7 @@ pub fn find_negative_cycle(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
 pub fn digraph_all_pairs_bellman_ford_path_lengths(
@@ -2011,6 +2113,19 @@ pub fn digraph_all_pairs_bellman_ford_path_lengths(
     edge_cost_fn: PyObject,
 ) -> PyResult<AllPairsPathLengthMapping> {
     all_pairs_bellman_ford::all_pairs_bellman_ford_path_lengths(py, &graph.graph, edge_cost_fn)
+}
+
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
+pub fn digraph_all_pairs_bellman_ford_path_lengths(
+    py: Python,
+    graph: &digraph::PyDiGraph,
+    edge_cost_fn: PyObject,
+) -> PyResult<AllPairsPathLengthMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "digraph_all_pairs_bellman_ford_path_lengths is not supported in WebAssembly environment",
+    ))
 }
 
 /// For each node in the graph, finds the shortest paths to all others in a
@@ -2043,6 +2158,7 @@ pub fn digraph_all_pairs_bellman_ford_path_lengths(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
 pub fn digraph_all_pairs_bellman_ford_shortest_paths(
@@ -2051,6 +2167,19 @@ pub fn digraph_all_pairs_bellman_ford_shortest_paths(
     edge_cost_fn: PyObject,
 ) -> PyResult<AllPairsPathMapping> {
     all_pairs_bellman_ford::all_pairs_bellman_ford_shortest_paths(py, &graph.graph, edge_cost_fn)
+}
+
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
+pub fn digraph_all_pairs_bellman_ford_shortest_paths(
+    py: Python,
+    graph: &digraph::PyDiGraph,
+    edge_cost_fn: PyObject,
+) -> PyResult<AllPairsPathMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "digraph_all_pairs_bellman_ford_shortest_paths is not supported in WebAssembly environment",
+    ))
 }
 
 /// For each node in the graph, calculates the lengths of the shortest paths
@@ -2079,6 +2208,7 @@ pub fn digraph_all_pairs_bellman_ford_shortest_paths(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
 pub fn graph_all_pairs_bellman_ford_path_lengths(
@@ -2087,6 +2217,19 @@ pub fn graph_all_pairs_bellman_ford_path_lengths(
     edge_cost_fn: PyObject,
 ) -> PyResult<AllPairsPathLengthMapping> {
     all_pairs_bellman_ford::all_pairs_bellman_ford_path_lengths(py, &graph.graph, edge_cost_fn)
+}
+
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
+pub fn graph_all_pairs_bellman_ford_path_lengths(
+    py: Python,
+    graph: &graph::PyGraph,
+    edge_cost_fn: PyObject,
+) -> PyResult<AllPairsPathLengthMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "graph_all_pairs_bellman_ford_path_lengths is not supported in WebAssembly environment",
+    ))
 }
 
 /// For each node in the graph, finds the shortest paths to all others in a
@@ -2115,6 +2258,7 @@ pub fn graph_all_pairs_bellman_ford_path_lengths(
 ///
 /// :raises: :class:`~rustworkx.NegativeCycle`: when there is a negative cycle and the shortest
 ///     path is not defined.
+#[cfg(not(feature = "wasm"))]
 #[pyfunction]
 #[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
 pub fn graph_all_pairs_bellman_ford_shortest_paths(
@@ -2123,4 +2267,17 @@ pub fn graph_all_pairs_bellman_ford_shortest_paths(
     edge_cost_fn: PyObject,
 ) -> PyResult<AllPairsPathMapping> {
     all_pairs_bellman_ford::all_pairs_bellman_ford_shortest_paths(py, &graph.graph, edge_cost_fn)
+}
+
+#[cfg(feature = "wasm")]
+#[pyfunction]
+#[pyo3(text_signature = "(graph, edge_cost_fn, /)")]
+pub fn graph_all_pairs_bellman_ford_shortest_paths(
+    py: Python,
+    graph: &graph::PyGraph,
+    edge_cost_fn: PyObject,
+) -> PyResult<AllPairsPathMapping> {
+    Err(PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(
+        "graph_all_pairs_bellman_ford_shortest_paths is not supported in WebAssembly environment",
+    ))
 }

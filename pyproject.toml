@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 packages = ["numpy"]
 target = "wasm32-unknown-emscripten"
 exclude = ["tests"]
+# Add the wasm feature flag to ensure it's enabled when using pyodide-build
+features = ["wasm"]
 
 [tool.black]
 line-length = 100

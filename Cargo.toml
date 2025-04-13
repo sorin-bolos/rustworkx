@@ -36,9 +36,9 @@ indexmap = { version = ">=1.9, <3" }
 ndarray = { version = "0.16.1" }
 num-traits = "0.2"
 petgraph = "0.7.0"
-hashbrown = { version = ">=0.13, <0.16" }
+hashbrown = "0.15.2"
 numpy = "0.23"
-rand = "0.8"
+rand = { version = "0.8", features = ["small_rng"] }
 rand_pcg = "0.3"
 rayon = "1.10"
 
@@ -49,7 +49,8 @@ crate-type = ["cdylib"]
 [dependencies]
 ahash.workspace = true
 fixedbitset.workspace = true
-hashbrown = { workspace = true, features = ["raw"] }
+# Updated hashbrown to specify version directly without non-existent features
+hashbrown = "0.15.2"
 indexmap.workspace = true
 ndarray.workspace = true
 ndarray-stats = "0.6.0"
@@ -70,10 +71,11 @@ flate2 = "1.0.35"
 
 # Enable rayon features only when not targeting WebAssembly
 [target.'cfg(not(feature = "wasm"))'.dependencies]
-hashbrown = { workspace = true, features = ["raw", "rayon"] }
+rayon = { workspace = true }
+# Updated hashbrown to only include rayon feature
+hashbrown = { version = "0.15.2", features = ["rayon"] }
 indexmap = { workspace = true, features = ["rayon"] }
 ndarray = { workspace = true, features = ["rayon"] }
-rayon = { workspace = true }
 
 [dependencies.pyo3]
 version = "0.23"
@@ -85,5 +87,12 @@ default-features = false
 features = ["multi_thread"]
 
 [profile.release]
-lto = 'fat'
+lto = "fat"
 codegen-units = 1
+opt-level = 3
+
+# Special configuration for WASM builds
+[target.wasm32-unknown-emscripten.profile.release]
+lto = "thin"
+codegen-units = 16
+opt-level = 1

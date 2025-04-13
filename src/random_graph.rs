@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -28,9 +28,32 @@ use numpy::PyReadonlyArray2;
 
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
+
+// Use different RNG implementations based on target
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
 use rand_pcg::Pcg64;
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+use rand::rngs::SmallRng;
 
 use rustworkx_core::generators as core_generators;
+
+// Add a conditional implementation for the RNG creation
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    match seed {
+        Some(seed_value) => Pcg64::seed_from_u64(seed_value),
+        None => Pcg64::from_entropy(),
+    }
+}
+
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    use rand::SeedableRng;
+    match seed {
+        Some(seed_value) => SmallRng::seed_from_u64(seed_value),
+        None => SmallRng::from_entropy(),
+    }
+}
 
 /// Return a :math:`G_{np}` directed random graph, also known as an
 /// Erdős-Rényi graph or a binomial graph.
@@ -451,10 +474,7 @@ pub fn random_geometric_graph(
     let mut inner_graph = StablePyGraph::<Undirected>::default();
 
     let radius_p = pnorm(radius, p);
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
 
     let dist = Uniform::new(0.0, 1.0);
     let pos = pos.unwrap_or_else(|| {

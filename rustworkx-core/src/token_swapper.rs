@@ -12,7 +12,10 @@
 
 use rand::distributions::{Standard, Uniform};
 use rand::prelude::*;
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
 use rand_pcg::Pcg64;
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+use rand::rngs::SmallRng;
 use std::error::Error;
 use std::fmt;
 use std::hash::Hash;
@@ -159,10 +162,7 @@ where
         }
         // First collect the self.trial number of random numbers
         // into a Vec based on the given seed
-        let outer_rng: Pcg64 = match self.seed {
-            Some(rng_seed) => Pcg64::seed_from_u64(rng_seed),
-            None => Pcg64::from_entropy(),
-        };
+        let outer_rng = create_rng(self.seed);
         let trial_seeds_vec: Vec<u64> =
             outer_rng.sample_iter(&Standard).take(self.trials).collect();
 
@@ -259,7 +259,7 @@ where
         // Create a random trial list of swaps to move tokens to optimal positions
         let mut steps = 0;
         let mut swap_edges: Vec<Swap> = vec![];
-        let mut rng_seed: Pcg64 = Pcg64::seed_from_u64(trial_seed);
+        let mut rng_seed = create_rng(Some(trial_seed));
         while !todo_nodes.is_empty() && steps <= 4 * digraph.node_count().pow(2) {
             // Choose a random todo_node
             let between = Uniform::new(0, todo_nodes.len());
@@ -460,6 +460,23 @@ where
 {
     let mut swapper = TokenSwapper::new(graph, mapping, trials, seed, parallel_threshold);
     swapper.map()
+}
+
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    match seed {
+        Some(seed_value) => Pcg64::seed_from_u64(seed_value),
+        None => Pcg64::from_entropy(),
+    }
+}
+
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    use rand::SeedableRng;
+    match seed {
+        Some(seed_value) => SmallRng::seed_from_u64(seed_value),
+        None => SmallRng::from_entropy(),
+    }
 }
 
 #[cfg(test)]

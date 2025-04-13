@@ -37,6 +37,7 @@ pub fn floyd_warshall<Ty: EdgeType>(
     default_weight: f64,
     parallel_threshold: usize,
 ) -> PyResult<AllPairsPathLengthMapping> {
+    let _parallel_threshold = parallel_threshold;
     if graph.node_count() == 0 {
         return Ok(AllPairsPathLengthMapping {
             path_lengths: DictMap::new(),
@@ -173,6 +174,7 @@ pub fn floyd_warshall_numpy<Ty: EdgeType>(
     generate_successors: bool,
     parallel_threshold: usize,
 ) -> PyResult<(Array2<f64>, Option<Array2<usize>>)> {
+    let _parallel_threshold = parallel_threshold;
     let n = graph.node_count();
     // Allocate empty matrix
     let mut mat = Array2::<f64>::from_elem((n, n), f64::INFINITY);

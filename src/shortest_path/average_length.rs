@@ -25,6 +25,7 @@ pub fn compute_distance_sum<Ty: EdgeType + Sync>(
     parallel_threshold: usize,
     as_undirected: bool,
 ) -> (usize, usize) {
+    let _parallel_threshold = parallel_threshold;
     let n = graph.node_count();
     let bfs_traversal = |start_index: NodeIndex| -> (usize, usize) {
         let mut seen: HashSet<NodeIndex> = HashSet::with_capacity(n);

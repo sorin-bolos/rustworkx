@@ -27,6 +27,8 @@ use petgraph::visit::{IntoEdgeReferences, NodeIndexable};
 use petgraph::EdgeType;
 
 use rand::distributions::{Distribution, Uniform};
+
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
 use rand::prelude::*;
 
 // Use different RNG implementations based on target

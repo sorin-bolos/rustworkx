@@ -510,30 +510,10 @@ fn rustworkx(py: Python<'_>, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(digraph_has_path))?;
     m.add_wrapped(wrap_pyfunction!(graph_dijkstra_shortest_path_lengths))?;
     m.add_wrapped(wrap_pyfunction!(digraph_dijkstra_shortest_path_lengths))?;
-    #[cfg(not(feature = "wasm"))]
-    m.add_wrapped(wrap_pyfunction!(graph_bellman_ford_shortest_paths))?;
-    #[cfg(not(feature = "wasm"))]
-    m.add_wrapped(wrap_pyfunction!(digraph_bellman_ford_shortest_paths))?;
-    #[cfg(not(feature = "wasm"))]
-    m.add_wrapped(wrap_pyfunction!(graph_bellman_ford_shortest_path_lengths))?;
-    #[cfg(not(feature = "wasm"))]
-    m.add_wrapped(wrap_pyfunction!(digraph_bellman_ford_shortest_path_lengths))?;
-    m.add_wrapped(wrap_pyfunction!(negative_edge_cycle))?;
-    m.add_wrapped(wrap_pyfunction!(find_negative_cycle))?;
     m.add_wrapped(wrap_pyfunction!(digraph_all_pairs_dijkstra_path_lengths))?;
     m.add_wrapped(wrap_pyfunction!(digraph_all_pairs_dijkstra_shortest_paths))?;
     m.add_wrapped(wrap_pyfunction!(graph_all_pairs_dijkstra_path_lengths))?;
     m.add_wrapped(wrap_pyfunction!(graph_all_pairs_dijkstra_shortest_paths))?;
-    m.add_wrapped(wrap_pyfunction!(
-        digraph_all_pairs_bellman_ford_path_lengths
-    ))?;
-    m.add_wrapped(wrap_pyfunction!(
-        digraph_all_pairs_bellman_ford_shortest_paths
-    ))?;
-    m.add_wrapped(wrap_pyfunction!(graph_all_pairs_bellman_ford_path_lengths))?;
-    m.add_wrapped(wrap_pyfunction!(
-        graph_all_pairs_bellman_ford_shortest_paths
-    ))?;
     m.add_wrapped(wrap_pyfunction!(graph_betweenness_centrality))?;
     m.add_wrapped(wrap_pyfunction!(digraph_betweenness_centrality))?;
     m.add_wrapped(wrap_pyfunction!(graph_closeness_centrality))?;

@@ -26,10 +26,6 @@ the functions from the explicitly typed based on the data type.
    rustworkx.digraph_all_pairs_dijkstra_shortest_paths
    rustworkx.digraph_dijkstra_shortest_path_lengths
    rustworkx.digraph_all_pairs_dijkstra_path_lengths
-   rustworkx.digraph_bellman_ford_shortest_path_lengths
-   rustworkx.digraph_bellman_ford_shortest_path_lengths
-   rustworkx.digraph_all_pairs_bellman_ford_shortest_paths
-   rustworkx.digraph_all_pairs_bellman_ford_path_lengths
    rustworkx.digraph_k_shortest_path_lengths
    rustworkx.digraph_all_shortest_paths
    rustworkx.digraph_dfs_edges

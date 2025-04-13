@@ -45,6 +45,7 @@ pub fn compute_distance_matrix<Ty: EdgeType + Sync>(
     as_undirected: bool,
     null_value: f64,
 ) -> Array2<f64> {
+    let _parallel_threshold = parallel_threshold;
     let node_map: Option<HashMap<NodeIndex, usize>> = if graph.nodes_removed() {
         Some(
             graph

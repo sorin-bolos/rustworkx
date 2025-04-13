@@ -12,7 +12,6 @@
 
 use petgraph::EdgeType;
 
-use rand::distributions::Uniform;
 use rand::prelude::*;
 
 // Use different RNG implementations based on target

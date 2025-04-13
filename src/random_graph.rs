@@ -27,6 +27,8 @@ use petgraph::prelude::*;
 use numpy::PyReadonlyArray2;
 
 use rand::distributions::{Distribution, Uniform};
+
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
 use rand::prelude::*;
 
 // Use different RNG implementations based on target

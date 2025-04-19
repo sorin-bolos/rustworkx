@@ -802,29 +802,29 @@ def is_subgraph_isomorphic(
     raise TypeError(f"Invalid Input Type {type(first)} for graph")
 
 
-@_rustworkx_dispatch
-def transitivity(graph):
-    """Compute the transitivity of a graph.
+# @_rustworkx_dispatch
+# def transitivity(graph):
+#     """Compute the transitivity of a graph.
 
-    This function is multithreaded and will run
-    launch a thread pool with threads equal to the number of CPUs by default.
-    You can tune the number of threads with the ``RAYON_NUM_THREADS``
-    environment variable. For example, setting ``RAYON_NUM_THREADS=4`` would
-    limit the thread pool to 4 threads.
+#     This function is multithreaded and will run
+#     launch a thread pool with threads equal to the number of CPUs by default.
+#     You can tune the number of threads with the ``RAYON_NUM_THREADS``
+#     environment variable. For example, setting ``RAYON_NUM_THREADS=4`` would
+#     limit the thread pool to 4 threads.
 
-    .. note::
+#     .. note::
 
-        The function implicitly assumes that there are no parallel edges
-        or self loops. It may produce incorrect/unexpected results if the
-        input graph has self loops or parallel edges.
+#         The function implicitly assumes that there are no parallel edges
+#         or self loops. It may produce incorrect/unexpected results if the
+#         input graph has self loops or parallel edges.
 
-    :param graph: The graph to be used. Can either be a
-        :class:`~rustworkx.PyGraph` or :class:`~rustworkx.PyDiGraph`.
+#     :param graph: The graph to be used. Can either be a
+#         :class:`~rustworkx.PyGraph` or :class:`~rustworkx.PyDiGraph`.
 
-    :returns: Transitivity of the graph.
-    :rtype: float
-    """
-    raise TypeError(f"Invalid Input Type {type(graph)} for graph")
+#     :returns: Transitivity of the graph.
+#     :rtype: float
+#     """
+#     raise TypeError(f"Invalid Input Type {type(graph)} for graph")
 
 
 @_rustworkx_dispatch

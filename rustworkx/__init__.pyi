@@ -217,8 +217,8 @@ from .rustworkx import graph_all_shortest_paths as graph_all_shortest_paths
 from .rustworkx import digraph_tensor_product as digraph_tensor_product
 from .rustworkx import graph_tensor_product as graph_tensor_product
 from .rustworkx import graph_token_swapper as graph_token_swapper
-from .rustworkx import digraph_transitivity as digraph_transitivity
-from .rustworkx import graph_transitivity as graph_transitivity
+# from .rustworkx import digraph_transitivity as digraph_transitivity
+# from .rustworkx import graph_transitivity as graph_transitivity
 from .rustworkx import digraph_bfs_search as digraph_bfs_search
 from .rustworkx import graph_bfs_search as graph_bfs_search
 from .rustworkx import digraph_dfs_search as digraph_dfs_search
@@ -420,7 +420,7 @@ def is_subgraph_isomorphic(
     induced: bool = ...,
     call_limit: int | None = ...,
 ) -> bool: ...
-def transitivity(graph: PyGraph[_S, _T] | PyDiGraph[_S, _T]) -> float: ...
+# def transitivity(graph: PyGraph[_S, _T] | PyDiGraph[_S, _T]) -> float: ...
 def core_number(graph: PyGraph[_S, _T] | PyDiGraph[_S, _T]) -> int: ...
 def complement(
     graph: PyGraph[_S, _T] | PyDiGraph[_S, _T],

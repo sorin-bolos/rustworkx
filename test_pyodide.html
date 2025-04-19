@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Rustworkx Pyodide Test</title>
     <!-- Use Pyodide 0.25.0 which is the version our wheel was built for -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
 </head>
 <body>
     <h1>RustWorkX WebAssembly Test</h1>
@@ -36,59 +36,24 @@
             addToOutput("Micropip installed!");
 
             // Load the wheel file
-            addToOutput("Loading rustworkx wheel...");
+            addToOutput("Loading numpy...");
             await pyodide.loadPackage("numpy"); // Required dependency
+            addToOutput("numpy loaded!");
             
             try {
-                // Get detailed platform info
-                const sysInfo = await pyodide.runPythonAsync(`
-                    import sys
-                    import platform
-                    info = {
-                        "platform": platform.platform(),
-                        "emscripten_version": platform.system().split("-")[1] if "emscripten" in platform.system() else "unknown",
-                        "python_version": sys.version,
-                        "wheel_tags": [".".join(tag) for tag in sys.implementation._multiarch_specific_tags()]
-                    }
-                    info
-                `);
-                addToOutput("System info: " + JSON.stringify(sysInfo, null, 2));
 
+                addToOutput("Loading rustworkx...");
                 // Use the exact wheel file we built with platform adaptation
-                const wheelPath = "./dist/rustworkx-0.17.0-cp39-abi3-pyodide_2025_0_wasm32.whl";
-                addToOutput("Installing wheel from: " + wheelPath);
+                const wheelPath = "http://localhost:8000/dist/rustworkx-0.17.0-cp39-abi3-pyodide_2024_0_wasm32.whl";
 
-                // Attempt installation with debug info
+                // Install the wheel
                 await pyodide.runPythonAsync(`
-                    import os
                     import micropip
-                    
-                    try:
-                        # First check if wheel exists
-                        if not os.path.exists("${wheelPath}"):
-                            raise FileNotFoundError(f"Wheel not found: ${wheelPath}")
-                            
-                        print("Found wheel file, attempting installation...")
-                        # Try installation with force option
-                        await micropip.install("${wheelPath}", keep_going=True)
-                        print("Rustworkx installed!")
-                    except Exception as e:
-                        print(f"Installation error: {e}")
-                        
-                        # Try to extract more info from the wheel
-                        import zipfile
-                        try:
-                            with zipfile.ZipFile("${wheelPath}") as wheel:
-                                print(f"Wheel contents: {wheel.namelist()[:5]} (showing first 5)")
-                                # Look for the WHEEL metadata file
-                                if 'rustworkx-0.17.0.dist-info/WHEEL' in wheel.namelist():
-                                    with wheel.open('rustworkx-0.17.0.dist-info/WHEEL') as f:
-                                        print(f"WHEEL metadata: {f.read().decode('utf-8')}")
-                        except Exception as wheel_error:
-                            print(f"Failed to read wheel: {wheel_error}")
-                        
-                        raise e
+                    await micropip.install("${wheelPath}")
+                    print("Rustworkx installed!")
                 `);
+                addToOutput("Rustworkx installed successfully!");
+                
 
                 // Run a simple test using rustworkx
                 const result = await pyodide.runPythonAsync(`

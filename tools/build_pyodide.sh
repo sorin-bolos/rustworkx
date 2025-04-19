@@ -13,11 +13,12 @@ get_emcc_version() {
     emcc --version | head -n 1 | sed -E 's/.*emcc .* ([0-9]+\.[0-9]+\.[0-9]+).*/\1/'
 }
 
-# Install and set nightly Rust toolchain for Emscripten support
-echo "Installing nightly Rust toolchain for Emscripten support..."
-rustup toolchain install nightly
-rustup override set nightly
-rustup target add --toolchain nightly wasm32-unknown-emscripten
+# Install and set stable Rust toolchain for Emscripten support since
+# we're targeting Python 3.12 and Emscripten 3.1.58 which works with stable Rust
+echo "Installing/updating stable Rust toolchain for Emscripten support..."
+rustup toolchain install stable
+rustup override set stable
+rustup target add --toolchain stable wasm32-unknown-emscripten
 
 # Set environment variable to indicate Pyodide build
 export PYODIDE=1
@@ -27,9 +28,9 @@ if ! command -v emcc &> /dev/null; then
     echo "Installing emscripten..."
     git clone https://github.com/emscripten-core/emsdk.git
     cd emsdk
-    # Use version 4.0.6 as required by Pyodide
-    ./emsdk install 4.0.6
-    ./emsdk activate 4.0.6
+    # Use version 3.1.58 as required by Pyodide
+    ./emsdk install 3.1.58
+    ./emsdk activate 3.1.58
     source ./emsdk_env.sh
     cd ..
 else
@@ -37,9 +38,9 @@ else
     current_version=$(get_emcc_version)
     echo "Current emscripten version: $current_version"
     # Enforce specific version
-    if [[ "$current_version" != "4.0.6" ]]; then
+    if [[ "$current_version" != "3.1.58" ]]; then
         echo "ERROR: Current emscripten version ($current_version) is not compatible with Pyodide."
-        echo "Installing and activating version 4.0.6 which is required..."
+        echo "Installing and activating version 3.1.58 which is required..."
         
         # Check if emsdk is already installed
         if [ -d "emsdk" ]; then
@@ -49,8 +50,8 @@ else
             cd emsdk
         fi
         
-        ./emsdk install 4.0.6
-        ./emsdk activate 4.0.6
+        ./emsdk install 3.1.58
+        ./emsdk activate 3.1.58
         source ./emsdk_env.sh
         cd ..
         
@@ -62,9 +63,9 @@ fi
 
 # Ensure we have the correct Emscripten version
 current_version=$(get_emcc_version)
-if [[ "$current_version" != "4.0.6" ]]; then
-    echo "ERROR: Failed to set correct Emscripten version. Required: 4.0.6, Current: $current_version"
-    echo "Please manually install Emscripten 4.0.6 before continuing."
+if [[ "$current_version" != "3.1.58" ]]; then
+    echo "ERROR: Failed to set correct Emscripten version. Required: 3.1.58, Current: $current_version"
+    echo "Please manually install Emscripten 3.1.58 before continuing."
     exit 1
 fi
 
@@ -72,7 +73,6 @@ fi
 export EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0"
 
 # IMPORTANT: Use appropriate flags for WebAssembly threading support
-# Remove the -Z build-std flag as we'll handle it differently
 export RUSTFLAGS="-C target-feature=+atomics,+bulk-memory,+mutable-globals"
 export CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_LINKER=emcc
 
@@ -121,13 +121,13 @@ else
     
     # First run cargo directly to see detailed feature resolution
     echo "Running cargo check to debug feature resolution..."
-    # Use +nightly for explicit toolchain selection and move the build-std flag here
-    RUSTFLAGS="$RUSTFLAGS" cargo +nightly check -Z build-std=std,panic_abort --target wasm32-unknown-emscripten --features wasm -vv 2>&1 | tee -a $BUILD_LOG
+    # No need for +nightly or -Z build-std flags with stable rust
+    RUSTFLAGS="$RUSTFLAGS" cargo check --target wasm32-unknown-emscripten --features wasm -vv 2>&1 | tee -a $BUILD_LOG
     
-    echo "Building wheel with custom rust std library..."
-    # For the actual build, also use +nightly with build-std
+    echo "Building wheel..."
+    # For the actual build, use stable without special flags
     RUSTFLAGS="$RUSTFLAGS" python setup.py build_rust --release --plat-name=wasm32-unknown-emscripten --manylinux=off bdist_wheel 2>&1 | tee -a $BUILD_LOG
-fi
+    fi
 
 # Record build result
 BUILD_RESULT=$?

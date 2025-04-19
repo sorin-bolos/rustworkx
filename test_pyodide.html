@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rustworkx Pyodide Test</title>
+    <!-- Use Pyodide 0.25.0 which is the version our wheel was built for -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+</head>
+<body>
+    <h1>RustWorkX WebAssembly Test</h1>
+    <button id="runButton">Run Test</button>
+    <pre id="output"></pre>
+
+    <script type="text/javascript">
+        const output = document.getElementById('output');
+        const runButton = document.getElementById('runButton');
+
+        function addToOutput(text) {
+            output.textContent += text + '\n';
+        }
+
+        async function main() {
+            addToOutput("Loading pyodide...");
+            let pyodide = await loadPyodide();
+            addToOutput("Pyodide loaded successfully!");
+
+            // Get pyodide version for debugging
+            const pyodideVersion = await pyodide.runPythonAsync(`
+                import pyodide
+                pyodide.__version__
+            `);
+            addToOutput("Pyodide version: " + pyodideVersion);
+
+            addToOutput("Installing micropip...");
+            await pyodide.loadPackage("micropip");
+            addToOutput("Micropip installed!");
+
+            // Load the wheel file
+            addToOutput("Loading rustworkx wheel...");
+            await pyodide.loadPackage("numpy"); // Required dependency
+            
+            try {
+                // Get detailed platform info
+                const sysInfo = await pyodide.runPythonAsync(`
+                    import sys
+                    import platform
+                    info = {
+                        "platform": platform.platform(),
+                        "emscripten_version": platform.system().split("-")[1] if "emscripten" in platform.system() else "unknown",
+                        "python_version": sys.version,
+                        "wheel_tags": [".".join(tag) for tag in sys.implementation._multiarch_specific_tags()]
+                    }
+                    info
+                `);
+                addToOutput("System info: " + JSON.stringify(sysInfo, null, 2));
+
+                // Use the exact wheel file we built with platform adaptation
+                const wheelPath = "./dist/rustworkx-0.17.0-cp39-abi3-pyodide_2025_0_wasm32.whl";
+                addToOutput("Installing wheel from: " + wheelPath);
+
+                // Attempt installation with debug info
+                await pyodide.runPythonAsync(`
+                    import os
+                    import micropip
+                    
+                    try:
+                        # First check if wheel exists
+                        if not os.path.exists("${wheelPath}"):
+                            raise FileNotFoundError(f"Wheel not found: ${wheelPath}")
+                            
+                        print("Found wheel file, attempting installation...")
+                        # Try installation with force option
+                        await micropip.install("${wheelPath}", keep_going=True)
+                        print("Rustworkx installed!")
+                    except Exception as e:
+                        print(f"Installation error: {e}")
+                        
+                        # Try to extract more info from the wheel
+                        import zipfile
+                        try:
+                            with zipfile.ZipFile("${wheelPath}") as wheel:
+                                print(f"Wheel contents: {wheel.namelist()[:5]} (showing first 5)")
+                                # Look for the WHEEL metadata file
+                                if 'rustworkx-0.17.0.dist-info/WHEEL' in wheel.namelist():
+                                    with wheel.open('rustworkx-0.17.0.dist-info/WHEEL') as f:
+                                        print(f"WHEEL metadata: {f.read().decode('utf-8')}")
+                        except Exception as wheel_error:
+                            print(f"Failed to read wheel: {wheel_error}")
+                        
+                        raise e
+                `);
+
+                // Run a simple test using rustworkx
+                const result = await pyodide.runPythonAsync(`
+                    import rustworkx as rx
+                    import sys
+                    
+                    # Create a simple graph
+                    graph = rx.PyGraph()
+                    node_a = graph.add_node("A")
+                    node_b = graph.add_node("B")
+                    node_c = graph.add_node("C")
+                    
+                    # Add edges
+                    graph.add_edge(node_a, node_b, "A-B")
+                    graph.add_edge(node_b, node_c, "B-C")
+                    
+                    # Get information about the graph
+                    result = {
+                        "num_nodes": len(graph),
+                        "num_edges": graph.num_edges(),
+                        "nodes": [graph.get_node_data(n) for n in range(len(graph))],
+                        "edges": [graph.get_edge_data(e[0], e[1]) for e in graph.edge_list()]
+                    }
+                    
+                    result_str = str(result)
+                    result_str
+                `);
+                
+                addToOutput("Test result: " + result);
+                addToOutput("Test completed successfully!");
+                
+            } catch (error) {
+                addToOutput("Error: " + error);
+                console.error(error);
+                
+                // Try to provide more detailed error information
+                try {
+                    // Get installed packages
+                    const packages = await pyodide.runPythonAsync(`
+                        import micropip
+                        micropip.list()
+                    `);
+                    addToOutput("Installed packages: " + packages);
+                    
+                    // Check if the wheel file exists
+                    const wheelExists = await pyodide.runPythonAsync(`
+                        import os
+                        os.path.exists("./dist/rustworkx-0.17.0-cp39-abi3-pyodide_2025_0_wasm32.whl")
+                    `);
+                    addToOutput("Wheel file exists: " + wheelExists);
+                    
+                    // List files in dist directory
+                    const distFiles = await pyodide.runPythonAsync(`
+                        import os
+                        os.path.exists("./dist") and os.listdir("./dist")
+                    `);
+                    addToOutput("Files in dist directory: " + distFiles);
+                } catch (innerError) {
+                    addToOutput("Error getting additional info: " + innerError);
+                }
+            }
+        }
+
+        runButton.addEventListener('click', () => {
+            output.textContent = ""; // Clear previous output
+            main();
+        });
+    </script>
+</body>
+</html>

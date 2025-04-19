@@ -43,15 +43,19 @@ rust_extension_kwargs = {
 # Add Wasm-specific build configuration
 if is_pyodide:
     rust_extension_kwargs.update({
-        "features": ["wasm"],  # Optional feature for conditional Wasm compilation
-        # Don't include explicit target flag when using pyodide-build
-        # as it will be added by the build system
+        "features": ["wasm"],
+        "rust_version": ">=1.65.0",
+        "rustc_flags": [
+            #"--target=wasm32-unknown-emscripten",
+            "-C", "target-feature=+atomics,+bulk-memory,+mutable-globals",
+        ]
     })
 
 RUST_EXTENSIONS = [RustExtension("rustworkx.rustworkx", "Cargo.toml", **rust_extension_kwargs)]
 
 # For Pyodide, we need to adjust the Python limited API configuration
-RUST_OPTS = {"bdist_wheel": {"py_limited_api": "cp39"}} if not is_pyodide else {}
+# For WebAssembly, we should keep the limited API enabled
+RUST_OPTS = {"bdist_wheel": {"py_limited_api": "cp39"}}
 
 retworkx_readme_compat = """# retworkx
 

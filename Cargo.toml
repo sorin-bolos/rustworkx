@@ -12,8 +12,8 @@ license.workspace = true
 
 [features]
 default = []
-# Feature flag for WebAssembly compilation
-wasm = []
+# Feature flag for WebAssembly compilation - updated to use correct PyO3 WASM feature
+wasm = ["pyo3/extension-module", "pyo3/abi3-py39"]
 
 [workspace]
 members = [
@@ -92,6 +92,12 @@ codegen-units = 1
 opt-level = 3
 
 # Special configuration for WASM builds
+[target.wasm32-unknown-emscripten.dependencies]
+rayon = { version = "1.10", optional = true }
+hashbrown = { version = "0.15.2" }
+indexmap = { version = ">=1.9, <3" }
+ndarray = { version = "0.16.1" }
+
 [target.wasm32-unknown-emscripten.profile.release]
 lto = "thin"
 codegen-units = 16

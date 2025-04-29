@@ -2,6 +2,13 @@
 requires = ["setuptools", "wheel", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
 
+[tool.pyodide]
+packages = ["numpy"]
+target = "wasm32-unknown-emscripten"
+exclude = ["tests"]
+# Add the wasm feature flag to ensure it's enabled when using pyodide-build
+features = ["wasm"]
+
 [tool.black]
 line-length = 100
 target-version = ['py39', 'py310', 'py311', 'py312']

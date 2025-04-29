@@ -10,6 +10,11 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 
+[features]
+default = []
+# Feature flag for WebAssembly compilation - updated to use correct PyO3 WASM feature
+wasm = ["pyo3/extension-module", "pyo3/abi3-py39"]
+
 [workspace]
 members = [
     "rustworkx-core",
@@ -26,13 +31,14 @@ license = "Apache-2.0"
 [workspace.dependencies]
 ahash = "0.8.6"
 fixedbitset = "0.5.7"
-indexmap = { version = ">=1.9, <3", features = ["rayon"] }
-ndarray = { version = "0.16.1", features = ["rayon"] }
+# Conditionally enable rayon feature based on wasm feature
+indexmap = { version = ">=1.9, <3" }
+ndarray = { version = "0.16.1" }
 num-traits = "0.2"
 petgraph = "0.7.0"
-hashbrown = { version = ">=0.13, <0.16", features = ["rayon"] }
+hashbrown = "0.15.2"
 numpy = "0.23"
-rand = "0.8"
+rand = { version = "0.8", features = ["small_rng"] }
 rand_pcg = "0.3"
 rayon = "1.10"
 
@@ -43,7 +49,8 @@ crate-type = ["cdylib"]
 [dependencies]
 ahash.workspace = true
 fixedbitset.workspace = true
-hashbrown.workspace = true
+# Updated hashbrown to specify version directly without non-existent features
+hashbrown = "0.15.2"
 indexmap.workspace = true
 ndarray.workspace = true
 ndarray-stats = "0.6.0"
@@ -55,12 +62,20 @@ petgraph.workspace = true
 quick-xml = "0.37"
 rand.workspace = true
 rand_pcg.workspace = true
-rayon.workspace = true
+rayon = { workspace = true, optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 smallvec = { version = "1.0", features = ["union"] }
 rustworkx-core = { path = "rustworkx-core", version = "=0.17.0" }
 flate2 = "1.0.35"
+
+# Enable rayon features only when not targeting WebAssembly
+[target.'cfg(not(feature = "wasm"))'.dependencies]
+rayon = { workspace = true }
+# Updated hashbrown to only include rayon feature
+hashbrown = { version = "0.15.2", features = ["rayon"] }
+indexmap = { workspace = true, features = ["rayon"] }
+ndarray = { workspace = true, features = ["rayon"] }
 
 [dependencies.pyo3]
 version = "0.23"
@@ -72,5 +87,18 @@ default-features = false
 features = ["multi_thread"]
 
 [profile.release]
-lto = 'fat'
+lto = "fat"
 codegen-units = 1
+opt-level = 3
+
+# Special configuration for WASM builds
+[target.wasm32-unknown-emscripten.dependencies]
+rayon = { version = "1.10", optional = true }
+hashbrown = { version = "0.15.2" }
+indexmap = { version = ">=1.9, <3" }
+ndarray = { version = "0.16.1" }
+
+[target.wasm32-unknown-emscripten.profile.release]
+lto = "thin"
+codegen-units = 16
+opt-level = 1

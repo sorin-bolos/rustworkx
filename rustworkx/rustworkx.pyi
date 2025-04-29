@@ -710,37 +710,6 @@ def from_node_link_json_file(
 
 # Shortest Path
 
-def digraph_bellman_ford_shortest_paths(
-    graph: PyDiGraph[_S, _T],
-    source: int,
-    /,
-    target: int | None = ...,
-    weight_fn: Callable[[_T], float] | None = ...,
-    default_weight: float = ...,
-    as_undirected: bool = ...,
-) -> PathMapping: ...
-def graph_bellman_ford_shortest_paths(
-    graph: PyDiGraph[_S, _T],
-    source: int,
-    /,
-    target: int | None = ...,
-    weight_fn: Callable[[_T], float] | None = ...,
-    default_weight: float = ...,
-) -> PathMapping: ...
-def digraph_bellman_ford_shortest_path_lengths(
-    graph: PyDiGraph[_S, _T],
-    node: int,
-    edge_cost_fn: Callable[[_T], float] | None,
-    /,
-    goal: int | None = ...,
-) -> PathLengthMapping: ...
-def graph_bellman_ford_shortest_path_lengths(
-    graph: PyGraph[_S, _T],
-    node: int,
-    edge_cost_fn: Callable[[_T], float] | None,
-    /,
-    goal: int | None = ...,
-) -> PathLengthMapping: ...
 def digraph_dijkstra_shortest_paths(
     graph: PyDiGraph[_S, _T],
     source: int,
@@ -772,26 +741,6 @@ def graph_dijkstra_shortest_path_lengths(
     /,
     goal: int | None = ...,
 ) -> PathLengthMapping: ...
-def digraph_all_pairs_bellman_ford_path_lengths(
-    graph: PyDiGraph[_S, _T],
-    edge_cost: Callable[[_T], float],
-    /,
-) -> AllPairsPathLengthMapping: ...
-def graph_all_pairs_bellman_ford_path_lengths(
-    graph: PyGraph[_S, _T],
-    edge_cost: Callable[[_T], float],
-    /,
-) -> AllPairsPathLengthMapping: ...
-def digraph_all_pairs_bellman_ford_shortest_paths(
-    graph: PyDiGraph[_S, _T],
-    edge_cost: Callable[[_T], float],
-    /,
-) -> AllPairsPathMapping: ...
-def graph_all_pairs_bellman_ford_shortest_paths(
-    graph: PyDiGraph[_S, _T],
-    edge_cost: Callable[[_T], float],
-    /,
-) -> AllPairsPathMapping: ...
 def digraph_all_pairs_dijkstra_path_lengths(
     graph: PyDiGraph[_S, _T],
     edge_cost: Callable[[_T], float],
@@ -937,16 +886,6 @@ def graph_floyd_warshall_successor_and_distance(
     default_weight: float | None = ...,
     parallel_threshold: int | None = ...,
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...
-def find_negative_cycle(
-    graph: PyDiGraph[_S, _T],
-    edge_cost_fn: Callable[[_T], float],
-    /,
-) -> NodeIndices: ...
-def negative_edge_cycle(
-    graph: PyDiGraph[_S, _T],
-    edge_cost_fn: Callable[[_T], float],
-    /,
-) -> bool: ...
 def digraph_all_shortest_paths(
     graph: PyDiGraph[_S, _T],
     source: int,
@@ -989,10 +928,10 @@ def graph_token_swapper(
     parallel_threshold: int | None = ...,
 ) -> EdgeList: ...
 
-# Transitivity
+# # Transitivity
 
-def digraph_transitivity(graph: PyDiGraph, /) -> float: ...
-def graph_transitivity(graph: PyGraph, /) -> float: ...
+# def digraph_transitivity(graph: PyDiGraph, /) -> float: ...
+# def graph_transitivity(graph: PyGraph, /) -> float: ...
 
 # Traversal
 

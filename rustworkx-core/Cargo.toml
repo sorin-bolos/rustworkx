@@ -11,10 +11,14 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 
+[features]
+default = []
+wasm = []
+
 [dependencies]
 ahash.workspace = true
 fixedbitset.workspace = true
-hashbrown.workspace = true
+hashbrown = "0.15.2"
 indexmap.workspace = true
 ndarray.workspace = true
 num-traits.workspace = true
@@ -22,5 +26,16 @@ petgraph.workspace = true
 priority-queue = "2.1"
 rand.workspace = true
 rand_pcg.workspace = true
-rayon.workspace = true
+rayon = { workspace = true, optional = true }
 rayon-cond = "0.3"
+
+# Configure dependencies for non-wasm builds
+[target.'cfg(not(feature = "wasm"))'.dependencies]
+rayon = { workspace = true }
+hashbrown = { version = "0.15.2", features = ["rayon"] }
+indexmap = { workspace = true, features = ["rayon"] }
+ndarray = { workspace = true, features = ["rayon"] }
+
+# Configure dependencies for wasm builds
+[target.'cfg(feature = "wasm")'.dependencies]
+hashbrown = "0.15.2"

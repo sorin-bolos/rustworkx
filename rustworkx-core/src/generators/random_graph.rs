@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -25,7 +25,30 @@ use petgraph::{Incoming, Outgoing};
 use hashbrown::HashSet;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
+
+// Use different RNG implementations based on target or feature
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
 use rand_pcg::Pcg64;
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+use rand::rngs::SmallRng;
+
+// Replace usages of Pcg64 with a conditional implementation
+#[cfg(all(not(feature = "wasm"), not(target_os = "emscripten")))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    match seed {
+        Some(seed_value) => Pcg64::seed_from_u64(seed_value),
+        None => Pcg64::from_entropy(),
+    }
+}
+
+#[cfg(any(feature = "wasm", target_os = "emscripten"))]
+fn create_rng(seed: Option<u64>) -> impl rand::Rng {
+    use rand::SeedableRng;
+    match seed {
+        Some(seed_value) => SmallRng::seed_from_u64(seed_value),
+        None => SmallRng::from_entropy(),
+    }
+}
 
 use super::star_graph;
 use super::InvalidInputError;
@@ -93,10 +116,7 @@ where
     if num_nodes == 0 {
         return Err(InvalidInputError {});
     }
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut graph = G::with_capacity(num_nodes, num_nodes);
     let directed = graph.is_directed();
 
@@ -263,10 +283,7 @@ where
         found
     }
 
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut graph = G::with_capacity(num_nodes, num_edges);
     let directed = graph.is_directed();
 
@@ -380,10 +397,7 @@ where
     for _ in 0..num_nodes {
         graph.add_node(default_node_weight());
     }
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut blocks = Vec::new();
     {
         let mut block = 0;
@@ -512,10 +526,7 @@ where
     if num_nodes == 0 {
         return Err(InvalidInputError {});
     }
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut graph = G::with_capacity(num_nodes, num_nodes);
 
     let radius_p = pnorm(radius, p);
@@ -615,10 +626,7 @@ where
     if m < 1 || m >= n {
         return Err(InvalidInputError {});
     }
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut graph = match initial_graph {
         Some(initial_graph) => initial_graph,
         None => star_graph(
@@ -719,10 +727,7 @@ where
         return Err(InvalidInputError {});
     }
 
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut graph = G::with_capacity(num_l_nodes + num_r_nodes, num_l_nodes + num_r_nodes);
 
     for _ in 0..num_l_nodes + num_r_nodes {
@@ -821,10 +826,7 @@ where
         return Err(InvalidInputError {});
     }
 
-    let mut rng: Pcg64 = match seed {
-        Some(seed) => Pcg64::seed_from_u64(seed),
-        None => Pcg64::from_entropy(),
-    };
+    let mut rng = create_rng(seed);
     let mut graph = G::with_capacity(num_nodes, num_nodes);
     if graph.is_directed() {
         return Err(InvalidInputError {});
@@ -1269,7 +1271,7 @@ mod tests {
             path_graph(Some(4), None, || (), || (), false).unwrap();
         match barabasi_albert_graph(500, 40, None, Some(starting_graph), || (), || ()) {
             Ok(_) => panic!("Returned a non-error"),
-            Err(e) => assert_eq!(e, InvalidInputError),
+            Err(e) => assert_eq!(e, InvalidInputError {}),
         }
     }
 
@@ -1486,7 +1488,7 @@ mod tests {
             || (),
         ) {
             Ok(_) => panic!("Returned a non-error"),
-            Err(e) => assert_eq!(e, InvalidInputError),
+            Err(e) => assert_eq!(e, InvalidInputError {}),
         }
     }
 }

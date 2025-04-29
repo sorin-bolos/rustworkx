@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Added support for using rustworkx in web browsers through Pyodide.
+    This enables rustworkx's high-performance graph algorithms to run
+    in WebAssembly environments without modification to user code.
+    The feature includes WebAssembly build configuration, conditional
+    compilation for threading-related code, and Pyodide package
+    integration.

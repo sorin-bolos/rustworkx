@@ -5,11 +5,12 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use petgraph::graph::NodeIndex;
@@ -51,30 +52,60 @@ pub fn all_pairs_all_simple_paths<Ty: EdgeType + Sync>(
     let intermediate_cutoff = cutoff.map(|depth| depth - 2);
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
     let node_index_set = node_indices.iter().copied().collect();
+    
+    #[cfg(feature = "wasm")]
+    let paths = node_indices
+        .iter()
+        .map(|u| {
+            let out_paths = MultiplePathMapping {
+                paths: all_simple_paths_multiple_targets(
+                    graph,
+                    *u,
+                    &node_index_set,
+                    intermediate_min,
+                    intermediate_cutoff,
+                )
+                .iter()
+                .map(|(v, path)| {
+                    let output: Vec<Vec<usize>> = path
+                        .iter()
+                        .map(|v| v.iter().map(|i| i.index()).collect())
+                        .collect();
+                    (v.index(), output)
+                })
+                .collect(),
+            };
+            (u.index(), out_paths)
+        })
+        .collect();
+        
+    #[cfg(not(feature = "wasm"))]
+    let paths = node_indices
+        .par_iter()
+        .map(|u| {
+            let out_paths = MultiplePathMapping {
+                paths: all_simple_paths_multiple_targets(
+                    graph,
+                    *u,
+                    &node_index_set,
+                    intermediate_min,
+                    intermediate_cutoff,
+                )
+                .iter()
+                .map(|(v, path)| {
+                    let output: Vec<Vec<usize>> = path
+                        .iter()
+                        .map(|v| v.iter().map(|i| i.index()).collect())
+                        .collect();
+                    (v.index(), output)
+                })
+                .collect(),
+            };
+            (u.index(), out_paths)
+        })
+        .collect();
+    
     AllPairsMultiplePathMapping {
-        paths: node_indices
-            .par_iter()
-            .map(|u| {
-                let out_paths = MultiplePathMapping {
-                    paths: all_simple_paths_multiple_targets(
-                        graph,
-                        *u,
-                        &node_index_set,
-                        intermediate_min,
-                        intermediate_cutoff,
-                    )
-                    .iter()
-                    .map(|(v, path)| {
-                        let output: Vec<Vec<usize>> = path
-                            .iter()
-                            .map(|v| v.iter().map(|i| i.index()).collect())
-                            .collect();
-                        (v.index(), output)
-                    })
-                    .collect(),
-                };
-                (u.index(), out_paths)
-            })
-            .collect(),
+        paths,
     }
 }

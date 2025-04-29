@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -15,6 +15,7 @@ use std::hash::Hash;
 use hashbrown::{HashMap, HashSet};
 use petgraph::visit::{GraphBase, IntoNeighborsDirected, IntoNodeIdentifiers, NodeCount};
 use petgraph::Direction::{Incoming, Outgoing};
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use crate::dictmap::*;
@@ -72,6 +73,11 @@ where
         cores.insert(*k, k_deg);
         degree_map.insert(*k, k_deg);
     }
+    
+    #[cfg(feature = "wasm")]
+    node_vec.sort_by_key(|k| degree_map.get(k));
+    
+    #[cfg(not(feature = "wasm"))]
     node_vec.par_sort_by_key(|k| degree_map.get(k));
 
     let mut bin_boundaries: Vec<usize> =

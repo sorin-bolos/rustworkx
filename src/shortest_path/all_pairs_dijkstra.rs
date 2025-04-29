@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -26,6 +26,7 @@ use petgraph::prelude::*;
 use petgraph::visit::EdgeIndexable;
 use petgraph::EdgeType;
 
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use crate::iterators::{
@@ -73,6 +74,32 @@ pub fn all_pairs_dijkstra_path_lengths<Ty: EdgeType + Sync>(
         }
     };
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
+    
+    #[cfg(feature = "wasm")]
+    let out_map: DictMap<usize, PathLengthMapping> = node_indices
+        .into_iter()
+        .map(|x| {
+            let path_lengths: PyResult<Vec<Option<f64>>> =
+                dijkstra(graph, x, None, |e| edge_cost(e.id()), None);
+            let out_map = PathLengthMapping {
+                path_lengths: path_lengths
+                    .unwrap()
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(index, opt_cost)| {
+                        if index != x.index() {
+                            opt_cost.map(|cost| (index, cost))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+            };
+            (x.index(), out_map)
+        })
+        .collect();
+    
+    #[cfg(not(feature = "wasm"))]
     let out_map: DictMap<usize, PathLengthMapping> = node_indices
         .into_par_iter()
         .map(|x| {
@@ -95,6 +122,7 @@ pub fn all_pairs_dijkstra_path_lengths<Ty: EdgeType + Sync>(
             (x.index(), out_map)
         })
         .collect();
+        
     Ok(AllPairsPathLengthMapping {
         path_lengths: out_map,
     })
@@ -106,6 +134,7 @@ pub fn all_pairs_dijkstra_shortest_paths<Ty: EdgeType + Sync>(
     edge_cost_fn: PyObject,
     distances: Option<&mut HashMap<usize, DictMap<NodeIndex, f64>>>,
 ) -> PyResult<AllPairsPathMapping> {
+    // Early return cases
     if graph.node_count() == 0 {
         return Ok(AllPairsPathMapping {
             paths: DictMap::new(),
@@ -125,6 +154,8 @@ pub fn all_pairs_dijkstra_shortest_paths<Ty: EdgeType + Sync>(
                 .collect(),
         });
     }
+    
+    // Process edge weights
     let edge_cost_callable = CostFn::from(edge_cost_fn);
     let mut edge_weights: Vec<Option<f64>> = Vec::with_capacity(graph.edge_bound());
     for index in 0..=graph.edge_bound() {
@@ -140,6 +171,7 @@ pub fn all_pairs_dijkstra_shortest_paths<Ty: EdgeType + Sync>(
             None => Err(PyIndexError::new_err("No edge found for index")),
         }
     };
+    
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
     let temp_distances: RwLock<HashMap<usize, DictMap<NodeIndex, f64>>> = if distances.is_some() {
         RwLock::new(HashMap::with_capacity(graph.node_count()))
@@ -147,40 +179,75 @@ pub fn all_pairs_dijkstra_shortest_paths<Ty: EdgeType + Sync>(
         // Avoid extra allocation if HashMap isn't used
         RwLock::new(HashMap::new())
     };
-    let out_map = AllPairsPathMapping {
-        paths: node_indices
-            .into_par_iter()
-            .map(|x| {
-                let mut paths: DictMap<NodeIndex, Vec<NodeIndex>> =
-                    DictMap::with_capacity(graph.node_count());
-                let distance =
-                    dijkstra(graph, x, None, |e| edge_cost(e.id()), Some(&mut paths)).unwrap();
-                if distances.is_some() {
-                    temp_distances.write().unwrap().insert(x.index(), distance);
-                }
-                let index = x.index();
-                let out_paths = PathMapping {
-                    paths: paths
-                        .iter()
-                        .filter_map(|path_mapping| {
-                            let path_index = path_mapping.0.index();
-                            if index != path_index {
-                                Some((
-                                    path_index,
-                                    path_mapping.1.iter().map(|x| x.index()).collect(),
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect(),
-                };
-                (index, out_paths)
-            })
-            .collect(),
-    };
+    
+    #[cfg(feature = "wasm")]
+    let paths_map = node_indices
+        .into_iter()
+        .map(|x| {
+            let mut paths: DictMap<NodeIndex, Vec<NodeIndex>> =
+                DictMap::with_capacity(graph.node_count());
+            let distance =
+                dijkstra(graph, x, None, |e| edge_cost(e.id()), Some(&mut paths)).unwrap();
+            if distances.is_some() {
+                temp_distances.write().unwrap().insert(x.index(), distance);
+            }
+            let index = x.index();
+            let out_paths = PathMapping {
+                paths: paths
+                    .iter()
+                    .filter_map(|path_mapping| {
+                        let path_index = path_mapping.0.index();
+                        if index != path_index {
+                            Some((
+                                path_index,
+                                path_mapping.1.iter().map(|x| x.index()).collect(),
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+            };
+            (index, out_paths)
+        })
+        .collect();
+    
+    #[cfg(not(feature = "wasm"))]
+    let paths_map = node_indices
+        .into_par_iter()
+        .map(|x| {
+            let mut paths: DictMap<NodeIndex, Vec<NodeIndex>> =
+                DictMap::with_capacity(graph.node_count());
+            let distance =
+                dijkstra(graph, x, None, |e| edge_cost(e.id()), Some(&mut paths)).unwrap();
+            if distances.is_some() {
+                temp_distances.write().unwrap().insert(x.index(), distance);
+            }
+            let index = x.index();
+            let out_paths = PathMapping {
+                paths: paths
+                    .iter()
+                    .filter_map(|path_mapping| {
+                        let path_index = path_mapping.0.index();
+                        if index != path_index {
+                            Some((
+                                path_index,
+                                path_mapping.1.iter().map(|x| x.index()).collect(),
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+            };
+            (index, out_paths)
+        })
+        .collect();
+    
     if let Some(x) = distances {
         x.clone_from(&temp_distances.read().unwrap())
     };
-    Ok(out_map)
+    Ok(AllPairsPathMapping {
+        paths: paths_map,
+    })
 }

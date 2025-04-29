@@ -5,8 +5,8 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
 
@@ -15,6 +15,7 @@ use hashbrown::HashSet;
 use petgraph::prelude::*;
 use petgraph::EdgeType;
 
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use crate::StablePyGraph;
@@ -24,6 +25,7 @@ pub fn compute_distance_sum<Ty: EdgeType + Sync>(
     parallel_threshold: usize,
     as_undirected: bool,
 ) -> (usize, usize) {
+    let _parallel_threshold = parallel_threshold;
     let n = graph.node_count();
     let bfs_traversal = |start_index: NodeIndex| -> (usize, usize) {
         let mut seen: HashSet<NodeIndex> = HashSet::with_capacity(n);
@@ -62,15 +64,28 @@ pub fn compute_distance_sum<Ty: EdgeType + Sync>(
         (count, conn_pairs - 1)
     };
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
-    if n < parallel_threshold {
+
+    #[cfg(feature = "wasm")]
+    {
+        // Use sequential execution for WebAssembly
         node_indices
             .iter()
             .map(|index| bfs_traversal(*index))
             .fold((0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
-    } else {
-        node_indices
-            .par_iter()
-            .map(|index| bfs_traversal(*index))
-            .reduce(|| (0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
+    }
+
+    #[cfg(not(feature = "wasm"))]
+    {
+        if n < parallel_threshold {
+            node_indices
+                .iter()
+                .map(|index| bfs_traversal(*index))
+                .fold((0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
+        } else {
+            node_indices
+                .par_iter()
+                .map(|index| bfs_traversal(*index))
+                .reduce(|| (0, 0), |a, b| (a.0 + b.0, a.1 + b.1))
+        }
     }
 }

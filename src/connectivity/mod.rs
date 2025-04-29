@@ -32,6 +32,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::Python;
+#[cfg(not(feature = "wasm"))]
 use rayon::prelude::*;
 
 use ndarray::prelude::*;
@@ -1024,18 +1025,40 @@ fn longest_simple_path<Ty: EdgeType + Sync + Send>(
     }
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
     let node_index_set = node_indices.iter().copied().collect();
-    Some(NodeIndices {
-        nodes: node_indices
-            .par_iter()
+    
+    #[cfg(feature = "wasm")]
+    {
+        let longest_path = node_indices
+            .iter()
             .filter_map(|u| {
                 connectivity::longest_simple_path_multiple_targets(graph, *u, &node_index_set)
             })
-            .max_by_key(|x| x.len())
-            .unwrap()
-            .into_iter()
-            .map(|x| x.index())
-            .collect(),
-    })
+            .max_by_key(|x| x.len());
+            
+        Some(NodeIndices {
+            nodes: longest_path
+                .unwrap()
+                .into_iter()
+                .map(|x| x.index())
+                .collect(),
+        })
+    }
+    
+    #[cfg(not(feature = "wasm"))]
+    {
+        Some(NodeIndices {
+            nodes: node_indices
+                .par_iter()
+                .filter_map(|u| {
+                    connectivity::longest_simple_path_multiple_targets(graph, *u, &node_index_set)
+                })
+                .max_by_key(|x| x.len())
+                .unwrap()
+                .into_iter()
+                .map(|x| x.index())
+                .collect(),
+        })
+    }
 }
 
 /// Return a longest simple path in the graph
